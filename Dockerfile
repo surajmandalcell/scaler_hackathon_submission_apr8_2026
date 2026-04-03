@@ -15,15 +15,12 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
-# Frontend build (cached layer)
-COPY packages/frontend/package.json packages/frontend/package-lock.json* packages/frontend/
-RUN cd packages/frontend && npm ci 2>/dev/null || cd packages/frontend && npm install
-
-COPY packages/frontend/ packages/frontend/
-RUN cd packages/frontend && npm run build
+# Frontend build
+COPY packages/frontend/ /app/packages/frontend/
+RUN cd /app/packages/frontend && npm install --ignore-scripts && npm run build
 
 # Application code
-COPY packages/backend/ packages/backend/
+COPY packages/backend/ /app/packages/backend/
 COPY openenv.yaml inference.py ./
 
 EXPOSE 7860
