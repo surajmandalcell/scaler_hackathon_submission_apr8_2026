@@ -14,7 +14,7 @@
     "test:integration": "npm run test:integration -w packages/backend",
     "test:e2e": "npm run test:e2e -w packages/backend",
     "test:frontend": "npm test -w packages/frontend",
-    "test:all": "npm run test && npm run test:e2e",
+    "test:all": "npm run test && npm run test:frontend && npm run test:e2e",
 
     "lint": "npm run lint -w packages/backend",
     "lint:fix": "npm run lint:fix -w packages/backend",
@@ -30,6 +30,7 @@
     "validate": "openenv validate --url http://localhost:7860",
     "inference": "cd packages/backend && uv run python ../../inference.py",
 
+    "demo": "cd packages/backend && uv run python ../../scripts/demo.py",
     "preflight": "npm run lint && npm run typecheck && npm run test:all && npm run build"
   }
 }
