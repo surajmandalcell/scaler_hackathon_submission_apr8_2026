@@ -1,0 +1,18 @@
+spec_version: 1
+name: FridgeEnv
+description: >
+  Food waste reduction RL benchmark. Agent receives a fridge inventory with
+  expiring items and must plan meals to minimize waste while respecting
+  dietary restrictions and nutritional balance.
+version: 1.0.0
+type: environment
+runtime: docker
+app: app:app
+port: 7860
+tasks:
+  - id: easy
+    description: 5-8 items, 3-day horizon, 2 people, no dietary restrictions
+  - id: medium
+    description: 10-15 items, 7-day horizon, 3 people, 1 dietary restriction
+  - id: hard
+    description: 20-30 items, 14-day horizon, 4 people, 2 dietary restrictions
