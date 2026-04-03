@@ -1,223 +1,318 @@
 #!/usr/bin/env python3
 """
-FridgeEnv Interactive Demo
-==========================
-Runs the full environment lifecycle without needing a server or API key.
-Shows reset → agent → step → score for all difficulties.
+FridgeEnv Live Demo
+===================
+Starts the actual server, hits real HTTP endpoints, opens the browser,
+and walks through the full environment lifecycle with visible pacing.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import signal
+import subprocess
 import sys
 import time
 
-# Ensure packages/backend is on the path (when run via `uv run python ../../scripts/demo.py`)
-_backend_dir = os.path.join(os.path.dirname(__file__), "..", "packages", "backend")
-if os.path.isdir(_backend_dir):
-    sys.path.insert(0, os.path.abspath(_backend_dir))
+import httpx
 
-# ── Helpers ──────────────────────────────────────────────────────────
+# ── Config ───────────────────────────────────────────────────────────
+
+SERVER_PORT = 7860
+SERVER_URL = f"http://localhost:{SERVER_PORT}"
+BACKEND_DIR = os.path.join(os.path.dirname(__file__), "..", "packages", "backend")
+
+# ── Terminal colors ──────────────────────────────────────────────────
 
 BOLD = "\033[1m"
 DIM = "\033[2m"
-RESET_STYLE = "\033[0m"
+RS = "\033[0m"
 GREEN = "\033[32m"
 YELLOW = "\033[33m"
 RED = "\033[31m"
 CYAN = "\033[36m"
 MAGENTA = "\033[35m"
+WHITE = "\033[97m"
 
 
 def color_score(score: float) -> str:
     pct = f"{score * 100:.0f}%"
     if score >= 0.8:
-        return f"{GREEN}{pct}{RESET_STYLE}"
+        return f"{GREEN}{BOLD}{pct}{RS}"
     if score >= 0.5:
-        return f"{YELLOW}{pct}{RESET_STYLE}"
-    return f"{RED}{pct}{RESET_STYLE}"
+        return f"{YELLOW}{pct}{RS}"
+    return f"{RED}{pct}{RS}"
 
 
 def banner(text: str) -> None:
-    width = 60
-    print(f"\n{CYAN}{'═' * width}{RESET_STYLE}")
-    print(f"{CYAN}  {text}{RESET_STYLE}")
-    print(f"{CYAN}{'═' * width}{RESET_STYLE}\n")
+    w = 62
+    print(f"\n{CYAN}{'━' * w}{RS}")
+    print(f"{CYAN}  {BOLD}{text}{RS}")
+    print(f"{CYAN}{'━' * w}{RS}\n")
 
 
 def section(text: str) -> None:
-    print(f"\n{MAGENTA}── {text} {'─' * (50 - len(text))}{RESET_STYLE}")
+    print(f"\n{MAGENTA}{BOLD}▸ {text}{RS}")
+    print(f"{MAGENTA}{'─' * 58}{RS}")
+
+
+def step_pause(msg: str = "") -> None:
+    """Small delay so output feels like a real process, not a dump."""
+    if msg:
+        print(f"  {DIM}{msg}{RS}", end="", flush=True)
+    time.sleep(0.4)
+    if msg:
+        print()
+
+
+def wait_for_server(url: str, timeout: int = 15) -> bool:
+    """Poll until server responds or timeout."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            r = httpx.get(f"{url}/health", timeout=2)
+            if r.status_code == 200:
+                return True
+        except httpx.ConnectError:
+            pass
+        time.sleep(0.5)
+    return False
+
+
+# ── Server management ────────────────────────────────────────────────
+
+def start_server() -> subprocess.Popen:
+    """Start uvicorn in background, return process handle."""
+    proc = subprocess.Popen(
+        ["uv", "run", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(SERVER_PORT)],
+        cwd=os.path.abspath(BACKEND_DIR),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return proc
+
+
+# ── HTTP helpers ─────────────────────────────────────────────────────
+
+def api_reset(client: httpx.Client, task_id: str, seed: int) -> dict:
+    r = client.post(f"{SERVER_URL}/reset", json={"task_id": task_id, "seed": seed})
+    r.raise_for_status()
+    return r.json()
+
+
+def api_step(client: httpx.Client, action: dict) -> dict:
+    r = client.post(f"{SERVER_URL}/step", json=action)
+    r.raise_for_status()
+    return r.json()
+
+
+def api_state(client: httpx.Client) -> dict:
+    r = client.get(f"{SERVER_URL}/state")
+    r.raise_for_status()
+    return r.json()
+
+
+def build_fifo_plan(obs: dict) -> dict:
+    """Simple FIFO agent logic over HTTP observation dict."""
+    inv = sorted(obs["inventory"], key=lambda x: x["expiry_date"])
+    available = {i["name"]: i["quantity"] for i in inv}
+    plan = []
+    for day in range(1, obs["horizon"] + 1):
+        ingredients = []
+        used = set()
+        for item in inv:
+            n = item["name"]
+            if n in used or available.get(n, 0) <= 0:
+                continue
+            # Urgent items: use everything. Others: spread across remaining days.
+            days_left_str = item["expiry_date"]
+            from datetime import date as dt_date
+            exp = dt_date.fromisoformat(days_left_str)
+            cur = dt_date.fromisoformat(obs["current_date"])
+            urgency = (exp - cur).days - day
+            if urgency <= 1:
+                portion = available[n]
+            else:
+                portion = available[n] / max(1, obs["horizon"] - day + 1)
+                portion = max(portion, available[n] * 0.3)
+                portion = min(portion, available[n])
+            if portion > 0:
+                ingredients.append({"name": n, "quantity": round(portion, 1)})
+                available[n] -= portion
+                used.add(n)
+            if len(ingredients) >= 5:
+                break
+        if ingredients:
+            plan.append({"day": day, "meal_name": f"day{day}", "ingredients": ingredients})
+    return {"meal_plan": plan}
 
 
 # ── Main Demo ────────────────────────────────────────────────────────
 
 def main() -> None:
-    banner("FridgeEnv — Interactive Demo")
+    banner("FridgeEnv — Live Demo")
+    server_proc = None
 
-    print(f"{DIM}Importing environment...{RESET_STYLE}")
-    from env.fridge_env import FridgeEnv
-    from env.models import Action, Meal, MealIngredient
-    from agents.fifo_agent import FIFOAgent
-    from agents.random_agent import RandomAgent
-    from agents.eval import run_assessment
+    try:
+        # ── Start server ─────────────────────────────────────────
+        section("Starting Server")
+        print(f"  Launching uvicorn on port {SERVER_PORT}...")
+        server_proc = start_server()
+        time.sleep(0.5)
 
-    env = FridgeEnv()
-    fifo = FIFOAgent()
-    random_agent = RandomAgent(seed=0)
+        if not wait_for_server(SERVER_URL):
+            print(f"  {RED}Server failed to start!{RS}")
+            if server_proc:
+                out, err = server_proc.communicate(timeout=5)
+                print(f"  stderr: {err.decode()[-500:]}")
+            sys.exit(1)
 
-    # ── Part 1: Show environment lifecycle for each difficulty ────
+        print(f"  {GREEN}Server is live at {SERVER_URL}{RS}")
 
-    section("Part 1: Environment Lifecycle")
-    print("Demonstrating reset → observe → act → score for each difficulty.\n")
+        # Open browser
+        try:
+            import webbrowser
+            webbrowser.open(SERVER_URL)
+            print(f"  {DIM}Opened browser → {SERVER_URL}{RS}")
+        except Exception:
+            print(f"  {DIM}Open {SERVER_URL} in your browser to see the UI{RS}")
 
-    for difficulty in ["easy", "medium", "hard"]:
-        seed = 42
-        obs = env.reset(task_id=difficulty, seed=seed)
+        time.sleep(1)
+        client = httpx.Client(timeout=10)
 
-        print(f"{BOLD}[{difficulty.upper()}]{RESET_STYLE} seed={seed}")
-        print(f"  Inventory: {len(obs.inventory)} items, Horizon: {obs.horizon}d, "
-              f"Household: {obs.household_size}p")
-        if obs.dietary_restrictions:
-            print(f"  Restrictions: {', '.join(obs.dietary_restrictions)}")
+        # ── Health check ─────────────────────────────────────────
+        section("Health Check")
+        r = client.get(f"{SERVER_URL}/health")
+        print(f"  GET /health → {r.status_code}  {r.json()}")
+        step_pause()
 
-        # Show first 5 items
-        sorted_inv = sorted(obs.inventory, key=lambda x: x.expiry_date)
-        for item in sorted_inv[:5]:
-            days = (item.expiry_date - obs.current_date).days
-            urgency = f"{RED}!{RESET_STYLE}" if days <= 2 else " "
-            print(f"  {urgency} {item.name:20s} {item.quantity:>7.1f}{item.unit:3s} "
-                  f"expires in {days}d ({item.category})")
-        if len(obs.inventory) > 5:
-            print(f"  {DIM}  ...and {len(obs.inventory) - 5} more items{RESET_STYLE}")
-
-        # Run FIFO agent
-        action_dict = fifo.act(obs.model_dump(mode="json"))
-        action = Action(**action_dict)
-        _, reward, _, info = env.step(action)
-
-        print(f"\n  {BOLD}FIFO Agent Result:{RESET_STYLE}")
-        print(f"    Grader Score:    {color_score(reward.score)}")
-        print(f"    Waste Rate:      {reward.waste_rate * 100:.0f}%")
-        print(f"    Nutrition Score: {reward.nutrition_score * 100:.0f}%")
-        print(f"    Items Used:      {reward.items_used}/{len(obs.inventory)}")
-        print(f"    Items Expired:   {reward.items_expired}")
-        if reward.violations:
-            print(f"    Violations:      {len(reward.violations)}")
-        print()
-
-    # ── Part 2: Agent Comparison (20 episodes) ───────────────────
-
-    section("Part 2: Agent Comparison (20 episodes each)")
-    print()
-
-    header = f"{'Agent':15s} {'Difficulty':8s} {'Score':>8s} {'Waste':>8s} {'Nutrition':>10s}"
-    print(f"  {BOLD}{header}{RESET_STYLE}")
-    print(f"  {'─' * len(header)}")
-
-    for agent, name in [(random_agent, "Random"), (fifo, "FIFO")]:
+        # ── Run through each difficulty ──────────────────────────
         for difficulty in ["easy", "medium", "hard"]:
-            result = run_assessment(agent, difficulty, num_episodes=20)
-            score_str = color_score(result["mean_score"])
-            print(
-                f"  {name:15s} {difficulty:8s} {score_str:>17s} "
-                f"{result['mean_waste_rate'] * 100:>7.1f}% "
-                f"{result['mean_nutrition_score'] * 100:>9.1f}%"
-            )
+            section(f"Episode: {difficulty.upper()}")
 
-    # ── Part 3: Determinism Check ─────────────────────────────────
+            # Reset
+            step_pause("Resetting environment...")
+            obs = api_reset(client, difficulty, seed=42)
+            inv = obs["inventory"]
+            print(f"  {WHITE}{BOLD}{len(inv)} items{RS} in fridge, "
+                  f"horizon={obs['horizon']}d, household={obs['household_size']}p")
+            if obs.get("dietary_restrictions"):
+                print(f"  {YELLOW}Restrictions: {', '.join(obs['dietary_restrictions'])}{RS}")
 
-    section("Part 3: Determinism Verification")
-    print("  Running same seed twice to verify identical scores...\n")
+            # Show inventory
+            step_pause()
+            sorted_inv = sorted(inv, key=lambda x: x["expiry_date"])
+            for item in sorted_inv[:6]:
+                from datetime import date as dt_date
+                days = (dt_date.fromisoformat(item["expiry_date"])
+                        - dt_date.fromisoformat(obs["current_date"])).days
+                icon = f"{RED}⚠{RS}" if days <= 2 else " "
+                print(f"  {icon} {item['name'].replace('_', ' '):22s} "
+                      f"{item['quantity']:>7.0f}{item['unit']:3s}  "
+                      f"{'expires in ' + str(days) + 'd':>16s}  "
+                      f"{DIM}{item['category']}{RS}")
+            if len(inv) > 6:
+                print(f"  {DIM}  + {len(inv) - 6} more items{RS}")
 
-    for difficulty in ["easy", "medium", "hard"]:
-        scores = []
-        for _ in range(2):
-            obs = env.reset(task_id=difficulty, seed=99)
-            action_dict = fifo.act(obs.model_dump(mode="json"))
-            action = Action(**action_dict)
-            _, reward, _, _ = env.step(action)
-            scores.append(reward.score)
-        match = scores[0] == scores[1]
-        status = f"{GREEN}PASS{RESET_STYLE}" if match else f"{RED}FAIL{RESET_STYLE}"
-        print(f"  {difficulty:8s}: run1={scores[0]:.4f}  run2={scores[1]:.4f}  [{status}]")
+            # Plan meals
+            step_pause("FIFO agent planning meals...")
+            plan = build_fifo_plan(obs)
+            n_meals = len(plan["meal_plan"])
+            n_ingredients = sum(len(m["ingredients"]) for m in plan["meal_plan"])
+            print(f"  Planned {n_meals} meals using {n_ingredients} ingredient slots")
 
-    # ── Part 4: Score Variance Check ──────────────────────────────
+            # Show a couple meals
+            for meal in plan["meal_plan"][:3]:
+                items_str = ", ".join(
+                    f"{i['name'].replace('_', ' ')} ({i['quantity']:.0f})"
+                    for i in meal["ingredients"][:3]
+                )
+                extra = f" +{len(meal['ingredients']) - 3}" if len(meal["ingredients"]) > 3 else ""
+                print(f"    Day {meal['day']}: {items_str}{extra}")
+            if n_meals > 3:
+                print(f"    {DIM}...{n_meals - 3} more days{RS}")
 
-    section("Part 4: Score Variance (DQ Protection)")
-    print("  Checking that different seeds produce different scores...\n")
-    print(f"  {DIM}(Using random agent — FIFO is too good on easy to show variance){RESET_STYLE}\n")
+            # Submit
+            step_pause("Submitting plan to environment...")
+            result = api_step(client, plan)
+            reward = result["reward"]
+            info = result["info"]
 
-    for difficulty in ["easy", "medium", "hard"]:
-        unique_scores = set()
-        for seed in range(20):
-            obs = env.reset(task_id=difficulty, seed=seed)
-            action_dict = RandomAgent(seed=seed).act(obs.model_dump(mode="json"))
-            action = Action(**action_dict)
-            _, reward, _, _ = env.step(action)
-            unique_scores.add(round(reward.score, 4))
-        status = f"{GREEN}PASS{RESET_STYLE}" if len(unique_scores) > 1 else f"{RED}FAIL{RESET_STYLE}"
-        print(f"  {difficulty:8s}: {len(unique_scores)} unique scores across 20 seeds [{status}]")
+            print(f"\n  {BOLD}┌─ Results ─────────────────────────────┐{RS}")
+            print(f"  {BOLD}│{RS}  Grader Score:    {color_score(reward['score']):>25s}  {BOLD}│{RS}")
+            print(f"  {BOLD}│{RS}  Waste Rate:      {reward['waste_rate'] * 100:>14.0f}%         {BOLD}│{RS}")
+            print(f"  {BOLD}│{RS}  Nutrition:       {reward['nutrition_score'] * 100:>14.0f}%         {BOLD}│{RS}")
+            print(f"  {BOLD}│{RS}  Items Used:      {reward['items_used']:>14d}          {BOLD}│{RS}")
+            print(f"  {BOLD}│{RS}  Items Expired:   {reward['items_expired']:>14d}          {BOLD}│{RS}")
+            violations = reward.get("violations", [])
+            if violations:
+                print(f"  {BOLD}│{RS}  Violations:      {RED}{len(violations):>14d}{RS}          {BOLD}│{RS}")
+            print(f"  {BOLD}└───────────────────────────────────────┘{RS}")
 
-    # ── Part 5: API Endpoint Test ─────────────────────────────────
+            # Verify state
+            state = api_state(client)
+            assert state["done"] is True
+            step_pause()
 
-    section("Part 5: API Endpoint Smoke Test")
-    print("  Testing FastAPI endpoints via TestClient...\n")
+        # ── Agent comparison ─────────────────────────────────────
+        section("Agent Comparison (50 episodes each via HTTP)")
 
-    from fastapi.testclient import TestClient
-    from app import app
+        sys.path.insert(0, os.path.abspath(BACKEND_DIR))
+        from agents.fifo_agent import FIFOAgent
+        from agents.random_agent import RandomAgent
 
-    client = TestClient(app)
+        header = f"  {'Agent':12s} {'Difficulty':10s} {'Avg Score':>10s} {'Avg Waste':>10s}"
+        print(f"\n{BOLD}{header}{RS}")
+        print(f"  {'─' * 44}")
 
-    endpoints = [
-        ("GET",  "/health", None),
-        ("POST", "/reset",  {"task_id": "easy", "seed": 0}),
-        ("POST", "/step",   None),  # will build from reset response
-        ("GET",  "/state",  None),
-    ]
+        for AgentClass, name in [(RandomAgent, "Random"), (FIFOAgent, "FIFO")]:
+            for diff in ["easy", "medium", "hard"]:
+                scores = []
+                wastes = []
+                agent = AgentClass(seed=0) if name == "Random" else AgentClass()
+                for seed in range(50):
+                    obs = api_reset(client, diff, seed)
+                    plan = agent.act(obs)
+                    result = api_step(client, plan)
+                    scores.append(result["reward"]["score"])
+                    wastes.append(result["reward"]["waste_rate"])
+                avg_s = sum(scores) / len(scores)
+                avg_w = sum(wastes) / len(wastes)
+                print(f"  {name:12s} {diff:10s} {color_score(avg_s):>19s} "
+                      f"{avg_w * 100:>9.1f}%")
 
-    # Health
-    resp = client.get("/health")
-    status = f"{GREEN}PASS{RESET_STYLE}" if resp.status_code == 200 else f"{RED}FAIL{RESET_STYLE}"
-    print(f"  GET  /health  → {resp.status_code} [{status}]")
+        # ── Determinism proof ────────────────────────────────────
+        section("Determinism Proof")
+        print()
+        for diff in ["easy", "medium", "hard"]:
+            s1 = api_reset(client, diff, 777)
+            r1 = api_step(client, build_fifo_plan(s1))["reward"]["score"]
+            s2 = api_reset(client, diff, 777)
+            r2 = api_step(client, build_fifo_plan(s2))["reward"]["score"]
+            ok = r1 == r2
+            tag = f"{GREEN}MATCH{RS}" if ok else f"{RED}MISMATCH{RS}"
+            print(f"  {diff:8s}  seed=777  run1={r1:.4f}  run2={r2:.4f}  [{tag}]")
 
-    # Reset
-    resp = client.post("/reset", json={"task_id": "easy", "seed": 0})
-    status = f"{GREEN}PASS{RESET_STYLE}" if resp.status_code == 200 else f"{RED}FAIL{RESET_STYLE}"
-    obs_data = resp.json()
-    print(f"  POST /reset   → {resp.status_code} [{status}] "
-          f"({len(obs_data['inventory'])} items)")
+        step_pause()
 
-    # Step
-    item = obs_data["inventory"][0]
-    step_body = {
-        "meal_plan": [{
-            "day": 1,
-            "meal_name": "demo_meal",
-            "ingredients": [{"name": item["name"], "quantity": 10}],
-        }]
-    }
-    resp = client.post("/step", json=step_body)
-    status = f"{GREEN}PASS{RESET_STYLE}" if resp.status_code == 200 else f"{RED}FAIL{RESET_STYLE}"
-    step_data = resp.json()
-    print(f"  POST /step    → {resp.status_code} [{status}] "
-          f"(score={step_data['reward']['score']:.3f})")
+        # ── Done ─────────────────────────────────────────────────
+        banner("Demo Complete — Server Still Running")
+        print(f"  {WHITE}The server is live at {BOLD}{SERVER_URL}{RS}")
+        print(f"  {WHITE}The frontend is open in your browser.{RS}")
+        print(f"  {DIM}Try clicking Reset / Run FIFO Agent in the UI.{RS}")
+        print(f"\n  {DIM}Press Ctrl+C to stop the server and exit.{RS}\n")
 
-    # State
-    resp = client.get("/state")
-    status = f"{GREEN}PASS{RESET_STYLE}" if resp.status_code == 200 else f"{RED}FAIL{RESET_STYLE}"
-    print(f"  GET  /state   → {resp.status_code} [{status}] "
-          f"(done={resp.json()['done']})")
+        # Keep server alive until Ctrl+C
+        server_proc.wait()
 
-    # ── Summary ───────────────────────────────────────────────────
-
-    banner("Demo Complete")
-    print("  Everything works. Ready for hackathon submission.\n")
-    print(f"  {DIM}Next steps:{RESET_STYLE}")
-    print(f"    npm run preflight    — Full lint + typecheck + tests + build")
-    print(f"    npm run docker:build — Build Docker image")
-    print(f"    npm run inference    — Run LLM baseline (needs OPENAI_API_KEY)")
-    print()
+    except KeyboardInterrupt:
+        print(f"\n\n  {DIM}Shutting down...{RS}")
+    finally:
+        if server_proc and server_proc.poll() is None:
+            server_proc.terminate()
+            server_proc.wait(timeout=5)
+            print(f"  {DIM}Server stopped.{RS}\n")
 
 
 if __name__ == "__main__":
