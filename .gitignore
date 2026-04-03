@@ -40,3 +40,4 @@ htmlcov/
 
 # Results
 results.json
+.claude/
