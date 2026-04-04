@@ -102,11 +102,13 @@ npm run preflight
 
 | Agent | Easy | Medium | Hard |
 |-------|------|--------|------|
-| Random | 0.2-0.4 | 0.1-0.3 | 0.05-0.15 |
-| FIFO (greedy) | 0.7-0.9 | 0.4-0.6 | 0.2-0.4 |
-| LLM (GPT-4o-mini) | 0.8-1.0 | 0.5-0.7 | 0.3-0.5 |
+| Random | 0.72 | 0.66 | 0.63 |
+| FIFO (greedy) | 1.00 | 0.99 | 0.99 |
+| LLM (GLM-5.1) | 0.97 | 0.92* | —* |
 
-The **hard** task is designed so frontier models struggle below 0.5 — overlapping expiry clusters combined with dual dietary restrictions create combinatorial planning that greedy approaches cannot solve optimally.
+*LLM scores from partial run (GLM-5.1 via OpenAI-compatible API). Full results in `results.json`.
+
+The **hard** task is designed to challenge frontier models — overlapping expiry clusters combined with dual dietary restrictions create combinatorial planning that greedy approaches cannot solve optimally while respecting all constraints.
 
 ## Docker
 
