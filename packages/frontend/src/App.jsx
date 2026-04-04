@@ -108,10 +108,11 @@ export default function App() {
             return (
               <button type="button" key={t.id} onClick={() => setTaskId(t.id)} style={{
                 padding: "7px 14px", border: "none", cursor: "pointer",
-                borderRadius: "var(--r)", fontFamily: "var(--sans)", fontSize: "0.82rem",
-                fontWeight: active ? 600 : 400, transition: "all 0.15s ease",
+                borderRadius: "var(--r)", fontFamily: "var(--mono)", fontSize: "0.78rem",
+                fontWeight: 500, transition: "background 0.15s ease, color 0.15s ease",
                 background: active ? "var(--accent)" : "transparent",
                 color: active ? "var(--bg)" : "var(--t3)",
+                minWidth: 64, textAlign: "center",
               }}>
                 {t.label}
               </button>
