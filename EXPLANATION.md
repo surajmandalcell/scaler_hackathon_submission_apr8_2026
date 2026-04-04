@@ -82,7 +82,7 @@ We built three **baseline agents** to show the environment works:
 
 2. **FIFO Agent** — "First In, First Out" — always uses the soonest-expiring items first. Scores very well (~0.99) because it's greedy about preventing waste. But it ignores dietary restrictions and nutrition.
 
-3. **LLM Agent (GLM-5.1)** — We give an LLM the fridge inventory as text, ask it to make a meal plan, and submit that plan. This tests whether language models can do practical planning. Scores ~0.97 on easy, drops to ~0.75 on medium.
+3. **LLM Agent (GLM-5.1)** — We give an LLM the fridge inventory as text, ask it to make a meal plan, and submit that plan. This tests whether language models can do practical planning. Scores 0.97 on easy, drops to 0.73 on medium, and 0.68 on hard — clear difficulty progression.
 
 ### What Gets Judged
 
