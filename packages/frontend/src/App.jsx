@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+
 import FridgeView from "./components/FridgeView.jsx";
 import MealTimeline from "./components/MealTimeline.jsx";
 import ScoreCard from "./components/ScoreCard.jsx";
@@ -46,7 +47,9 @@ export default function App() {
         (a, b) => a.expiry_date.localeCompare(b.expiry_date)
       );
       const available = {};
-      inv.forEach((i) => (available[i.name] = i.quantity));
+      for (const i of inv) {
+        available[i.name] = i.quantity;
+      }
 
       const mealPlan = [];
       for (let day = 1; day <= observation.horizon; day++) {
@@ -133,6 +136,7 @@ export default function App() {
         <div style={{ display: "flex", gap: 4, background: "var(--bg-card)", borderRadius: "var(--radius)", padding: 4 }}>
           {TASKS.map((t) => (
             <button
+              type="button"
               key={t.id}
               onClick={() => setTaskId(t.id)}
               style={{
@@ -156,10 +160,11 @@ export default function App() {
 
         {/* Seed input */}
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
+          <label htmlFor="seed-input" style={{ color: "var(--text-muted)", fontSize: "0.8rem", fontFamily: "var(--font-mono)" }}>
             SEED
           </label>
           <input
+            id="seed-input"
             type="number"
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
@@ -179,6 +184,7 @@ export default function App() {
 
         {/* Action buttons */}
         <button
+          type="button"
           onClick={handleReset}
           disabled={loading}
           style={{
@@ -199,6 +205,7 @@ export default function App() {
 
         {observation && phase === "observing" && (
           <button
+            type="button"
             onClick={handleRunFIFO}
             disabled={loading}
             style={{
@@ -236,7 +243,7 @@ export default function App() {
           {result && <ScoreCard reward={result.reward} info={result.info} />}
 
           {/* Meal Timeline (after step) */}
-          {result && result.info && (
+          {result?.info && (
             <MealTimeline
               consumptionLog={result.info.consumption_log}
               nutritionLog={result.info.nutrition_log}
