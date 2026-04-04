@@ -41,3 +41,4 @@ htmlcov/
 # Results
 results.json
 .claude/
+docs/*.pdf
