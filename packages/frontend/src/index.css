@@ -1,142 +1,83 @@
 :root {
-  /* Warm filmic palette — mid-saturation, grain-friendly */
-  --bg-primary: #1c1a17;
-  --bg-secondary: #211f1b;
-  --bg-card: #28251f;
-  --bg-card-hover: #302c25;
-  --bg-elevated: #342f27;
+  /* Monochrome base — warm charcoal, not pure black */
+  --bg: #161514;
+  --bg-raised: #1e1d1b;
+  --bg-surface: #262523;
+  --bg-hover: #2e2c29;
 
-  /* Functional urgency — desaturated, not neon */
-  --green-fresh: #7fad6a;
-  --green-muted: #5e8a4c;
-  --yellow-warning: #c9a84c;
-  --amber-urgent: #b87d3a;
-  --red-expired: #b85442;
-  --red-glow: #a03a2a;
+  /* Single accent — warm ochre, used sparingly */
+  --accent: #c2873a;
+  --accent-dim: rgba(194, 135, 58, 0.10);
+  --accent-border: rgba(194, 135, 58, 0.20);
 
-  /* Warm accent — burnt amber */
-  --accent: #c47832;
-  --accent-soft: rgba(196, 120, 50, 0.12);
-  --accent-hover: #d48a40;
+  /* Semantic — desaturated, never loud */
+  --ok: #6b9b5a;
+  --warn: #b09340;
+  --danger: #a04b3a;
 
-  /* Text — warm off-whites */
-  --text-primary: #e8e0d4;
-  --text-secondary: #a39888;
-  --text-muted: #756a5c;
+  /* Text hierarchy — 4 levels only */
+  --t1: #ece6dc;
+  --t2: #b0a898;
+  --t3: #7a7168;
+  --t4: #524b43;
 
-  /* Surfaces — warm borders */
-  --border: #38332b;
-  --border-accent: rgba(196, 120, 50, 0.25);
+  /* Borders */
+  --line: #2c2a27;
+  --line-light: #363330;
 
-  /* Fonts */
-  --font-display: "DM Serif Display", Georgia, serif;
-  --font-body: "Outfit", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  /* Fonts — serif display, humanist body, monospace data */
+  --serif: "Fraunces", "Georgia", serif;
+  --sans: "Instrument Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", monospace;
 
-  /* Spacing */
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
-
-  /* Shadows — warm tinted */
-  --shadow-sm: 0 1px 3px rgba(20, 16, 10, 0.4);
-  --shadow-md: 0 4px 12px rgba(20, 16, 10, 0.5);
-  --shadow-lg: 0 8px 24px rgba(20, 16, 10, 0.6);
+  /* Radius */
+  --r: 8px;
+  --r-lg: 12px;
 }
 
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
 body {
-  font-family: var(--font-body);
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  font-family: var(--sans);
+  font-weight: 400;
+  background: var(--bg);
+  color: var(--t1);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
 }
 
-/* SVG grain filter — applied as overlay, fine texture, warm */
-body::before {
+/* Subtle grain — overlay blend, never on text */
+body::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.12;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  opacity: 0.08;
   mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.7' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Scrollbar — subtle, warm */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-light); border-radius: 2px; }
 
-/* Animations — calm, measured, film-like */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* Selection */
+::selection { background: rgba(194, 135, 58, 0.25); }
 
-@keyframes pulse-warm {
-  0%, 100% {
-    box-shadow: 0 0 6px rgba(184, 84, 66, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 14px rgba(184, 84, 66, 0.35);
-  }
+/* Animations — restrained */
+@keyframes enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes score-reveal {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-    filter: blur(2px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
+@keyframes reveal {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
 }
-
-.fade-in {
-  animation: fadeInUp 0.35s ease-out both;
-}
-
-/* Card base — paper texture feel */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease;
-}
-.card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-accent);
-}
-
-/* Selection highlight — warm amber */
-::selection {
-  background: rgba(196, 120, 50, 0.3);
-  color: var(--text-primary);
-}
+.enter { animation: enter 0.3s ease-out both; }

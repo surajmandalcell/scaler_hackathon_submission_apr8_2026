@@ -15,24 +15,19 @@ describe("App", () => {
     expect(screen.getByText("Hard")).toBeInTheDocument();
   });
 
-  it("renders the Reset button", () => {
+  it("renders the Generate button", () => {
     render(<App />);
-    const buttons = screen.getAllByText("Reset");
-    expect(buttons.length).toBeGreaterThanOrEqual(1);
-    // The actual button (not the <strong> in help text)
-    const btn = buttons.find((el) => el.tagName === "BUTTON");
-    expect(btn).toBeInTheDocument();
+    expect(screen.getByText("Generate")).toBeInTheDocument();
   });
 
   it("shows empty state initially", () => {
     render(<App />);
-    expect(screen.getByText(/Select a difficulty/)).toBeInTheDocument();
+    expect(screen.getByText(/generate a fridge/i)).toBeInTheDocument();
   });
 
   it("renders seed input with default value", () => {
     render(<App />);
-    const seedInput = screen.getByDisplayValue("42");
-    expect(seedInput).toBeInTheDocument();
+    expect(screen.getByDisplayValue("42")).toBeInTheDocument();
   });
 
   it("renders the footer", () => {
