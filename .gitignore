@@ -38,7 +38,8 @@ docker-compose.override.yml
 htmlcov/
 .pytest_cache/
 
-# Results
+# Results / Outputs
 results.json
+outputs/
 .claude/
 docs/*.pdf
