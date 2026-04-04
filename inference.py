@@ -2,6 +2,12 @@
 
 Runs 5 episodes per difficulty (easy, medium, hard) = 15 total LLM calls.
 Produces results.json with scores.
+
+Environment variables:
+    OPENAI_API_KEY  - API key (required)
+    API_BASE_URL    - LLM API base URL (default: https://api.openai.com/v1)
+    MODEL_NAME      - Model to use (default: gpt-4o-mini)
+    ENV_SERVER_URL  - FridgeEnv server URL (default: http://localhost:7860)
 """
 
 from __future__ import annotations
@@ -13,7 +19,8 @@ import sys
 import httpx
 from openai import OpenAI
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:7860")
+ENV_SERVER_URL = os.environ.get("ENV_SERVER_URL", "http://localhost:7860")
+API_BASE_URL = os.environ.get("API_BASE_URL", None)  # None = default OpenAI
 MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
 
 SYSTEM_PROMPT = """You are a meal planning agent. Given a fridge inventory with expiry dates, produce a meal plan that minimizes food waste.
@@ -55,9 +62,18 @@ def run_inference() -> dict:
         print("ERROR: OPENAI_API_KEY not set", file=sys.stderr)
         sys.exit(1)
 
-    client = OpenAI(api_key=api_key)
-    server = httpx.Client(base_url=API_BASE_URL, timeout=30.0)
+    # Build OpenAI client — supports any OpenAI-compatible API via base_url
+    client_kwargs = {"api_key": api_key}
+    if API_BASE_URL:
+        client_kwargs["base_url"] = API_BASE_URL
+    client = OpenAI(**client_kwargs)
+
+    server = httpx.Client(base_url=ENV_SERVER_URL, timeout=30.0)
     results: dict = {}
+
+    print(f"LLM: {MODEL_NAME} @ {API_BASE_URL or 'default OpenAI'}")
+    print(f"Env: {ENV_SERVER_URL}")
+    print()
 
     for task_id in ["easy", "medium", "hard"]:
         scores = []
@@ -87,17 +103,24 @@ def run_inference() -> dict:
                             {"role": "user", "content": user_msg},
                         ],
                         temperature=0.0,
-                        response_format={"type": "json_object"},
                     )
                     raw = response.choices[0].message.content
+                    # Try to extract JSON from response
+                    raw = raw.strip()
+                    if raw.startswith("```"):
+                        # Strip markdown code fences
+                        lines = raw.split("\n")
+                        raw = "\n".join(
+                            l for l in lines
+                            if not l.strip().startswith("```")
+                        )
                     meal_plan = json.loads(raw)
-                    # Validate structure
                     if "meal_plan" not in meal_plan:
                         meal_plan = None
                         continue
                     break
                 except (json.JSONDecodeError, Exception) as e:
-                    print(f"retry({attempt+1})", end=" ", flush=True)
+                    print(f"retry({attempt+1}: {type(e).__name__})", end=" ", flush=True)
                     continue
 
             if meal_plan is None:

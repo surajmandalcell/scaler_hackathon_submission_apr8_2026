@@ -145,7 +145,7 @@ export default function App() {
                 fontWeight: 500,
                 transition: "all 0.2s",
                 background: taskId === t.id ? "var(--accent)" : "transparent",
-                color: taskId === t.id ? "#000" : "var(--text-secondary)",
+                color: taskId === t.id ? "var(--bg-primary)" : "var(--text-secondary)",
               }}
               title={t.desc}
             >
@@ -206,7 +206,7 @@ export default function App() {
               borderRadius: "var(--radius-sm)",
               border: "none",
               background: "var(--green-muted)",
-              color: "#000",
+              color: "var(--bg-primary)",
               cursor: loading ? "wait" : "pointer",
               fontFamily: "var(--font-body)",
               fontSize: "0.85rem",

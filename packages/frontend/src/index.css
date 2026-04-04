@@ -1,31 +1,32 @@
 :root {
-  /* Dark kitchen palette */
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --bg-card: #1e1e1e;
-  --bg-card-hover: #252525;
-  --bg-elevated: #2a2a2a;
+  /* Warm filmic palette — mid-saturation, grain-friendly */
+  --bg-primary: #1c1a17;
+  --bg-secondary: #211f1b;
+  --bg-card: #28251f;
+  --bg-card-hover: #302c25;
+  --bg-elevated: #342f27;
 
-  /* Warm produce tones */
-  --green-fresh: #4ade80;
-  --green-muted: #22c55e;
-  --yellow-warning: #facc15;
-  --amber-urgent: #f59e0b;
-  --red-expired: #ef4444;
-  --red-glow: #dc2626;
+  /* Functional urgency — desaturated, not neon */
+  --green-fresh: #7fad6a;
+  --green-muted: #5e8a4c;
+  --yellow-warning: #c9a84c;
+  --amber-urgent: #b87d3a;
+  --red-expired: #b85442;
+  --red-glow: #a03a2a;
 
-  /* Accent */
-  --accent: #f97316;
-  --accent-soft: rgba(249, 115, 22, 0.15);
+  /* Warm accent — burnt amber */
+  --accent: #c47832;
+  --accent-soft: rgba(196, 120, 50, 0.12);
+  --accent-hover: #d48a40;
 
-  /* Text */
-  --text-primary: #f5f5f4;
-  --text-secondary: #a8a29e;
-  --text-muted: #78716c;
+  /* Text — warm off-whites */
+  --text-primary: #e8e0d4;
+  --text-secondary: #a39888;
+  --text-muted: #756a5c;
 
-  /* Surfaces */
-  --border: #2e2e2e;
-  --border-accent: rgba(249, 115, 22, 0.3);
+  /* Surfaces — warm borders */
+  --border: #38332b;
+  --border-accent: rgba(196, 120, 50, 0.25);
 
   /* Fonts */
   --font-display: "DM Serif Display", Georgia, serif;
@@ -33,9 +34,14 @@
   --font-mono: "JetBrains Mono", monospace;
 
   /* Spacing */
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+
+  /* Shadows — warm tinted */
+  --shadow-sm: 0 1px 3px rgba(20, 16, 10, 0.4);
+  --shadow-md: 0 4px 12px rgba(20, 16, 10, 0.5);
+  --shadow-lg: 0 8px 24px rgba(20, 16, 10, 0.6);
 }
 
 *,
@@ -54,19 +60,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Noise texture overlay */
+/* SVG grain filter — applied as overlay, fine texture, warm */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 9999;
+  opacity: 0.12;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
 }
 
-/* Scrollbar */
+/* Scrollbar — subtle, warm */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
@@ -76,11 +84,11 @@ body::before {
   border-radius: 3px;
 }
 
-/* Animations */
+/* Animations — calm, measured, film-like */
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -88,35 +96,47 @@ body::before {
   }
 }
 
-@keyframes pulse-glow {
+@keyframes pulse-warm {
   0%, 100% {
-    box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 6px rgba(184, 84, 66, 0.2);
   }
   50% {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+    box-shadow: 0 0 14px rgba(184, 84, 66, 0.35);
   }
 }
 
 @keyframes score-reveal {
   from {
     opacity: 0;
-    transform: scale(0.5);
+    transform: scale(0.85);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
     transform: scale(1);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
+    filter: blur(0);
   }
 }
 
 .fade-in {
-  animation: fadeInUp 0.4s ease-out both;
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+/* Card base — paper texture feel */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-accent);
+}
+
+/* Selection highlight — warm amber */
+::selection {
+  background: rgba(196, 120, 50, 0.3);
+  color: var(--text-primary);
 }

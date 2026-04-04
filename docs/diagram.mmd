@@ -1,0 +1,62 @@
+---
+title: FridgeEnv — System Architecture
+---
+graph TB
+    subgraph HF["☁️ Hugging Face Spaces"]
+        subgraph Docker["🐳 Docker Container (port 7860)"]
+            subgraph API["FastAPI Server (app.py)"]
+                health["/health"]
+                reset["/reset"]
+                step["/step"]
+                state["/state"]
+            end
+
+            subgraph Env["Core Environment"]
+                data["data.py\n50 ingredients\n6 categories"]
+                models["models.py\nObservation · Action\nReward · FridgeItem"]
+                gen["generator.py\nSeeded deterministic\nfridge state factory"]
+                scorer["scorer.py\nGrader · Waste rate\nNutrition · Violations"]
+                fridge["fridge_env.py\nreset() · step() · state()"]
+            end
+
+            subgraph Frontend["React Dashboard"]
+                app["App.jsx\nControls"]
+                fv["FridgeView\nInventory grid"]
+                sc["ScoreCard\nReward display"]
+                mt["MealTimeline\nConsumption viz"]
+            end
+
+            data --> gen
+            models --> gen
+            models --> scorer
+            gen --> fridge
+            scorer --> fridge
+            fridge --> API
+
+            API -->|"serves at /"| Frontend
+        end
+    end
+
+    subgraph Agents["Baseline Agents"]
+        random["RandomAgent\nHeuristic"]
+        fifo["FIFOAgent\nGreedy expiry-first"]
+        llm["inference.py\nLLM via OpenAI API"]
+    end
+
+    subgraph LLM_API["LLM Provider"]
+        glm["GLM-5.1 / GPT-4o-mini\nOpenAI-compatible API"]
+    end
+
+    llm -->|"POST /reset\nPOST /step"| API
+    llm -->|"chat.completions.create()"| glm
+    random -->|"act(obs)"| fridge
+    fifo -->|"act(obs)"| fridge
+    Frontend -->|"fetch()"| API
+
+    style HF fill:#1a1a2e,stroke:#e8e0d4,color:#e8e0d4
+    style Docker fill:#16213e,stroke:#537895,color:#e8e0d4
+    style API fill:#0f3460,stroke:#537895,color:#e8e0d4
+    style Env fill:#1a1a2e,stroke:#c47832,color:#e8e0d4
+    style Frontend fill:#1a1a2e,stroke:#4ade80,color:#e8e0d4
+    style Agents fill:#2d1b4e,stroke:#a78bfa,color:#e8e0d4
+    style LLM_API fill:#3b1a1a,stroke:#ef4444,color:#e8e0d4

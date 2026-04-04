@@ -101,7 +101,7 @@ export default function FridgeView({
                 padding: "14px 16px",
                 transition: "all 0.2s",
                 cursor: "default",
-                animation: isUrgent ? "pulse-glow 2s ease-in-out infinite" : undefined,
+                animation: isUrgent ? "pulse-warm 2.5s ease-in-out infinite" : undefined,
                 position: "relative",
                 overflow: "hidden",
               }}
