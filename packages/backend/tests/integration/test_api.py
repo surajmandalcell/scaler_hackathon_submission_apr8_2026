@@ -27,7 +27,7 @@ def _step_json(item_name: str, qty: float = 1) -> dict:
 def test_health_returns_200(client):
     resp = client.get("/health")
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    assert resp.json()["status"] == "healthy"
 
 
 def test_reset_returns_observation(client):

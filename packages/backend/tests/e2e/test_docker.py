@@ -52,7 +52,7 @@ def test_docker_run_health():
         time.sleep(3)
         resp = httpx.get(f"http://localhost:{HOST_PORT}/health", timeout=10)
         assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        assert resp.json()["status"] == "healthy"
     finally:
         subprocess.run(["docker", "stop", CONTAINER_NAME], capture_output=True)
         proc.wait(timeout=10)

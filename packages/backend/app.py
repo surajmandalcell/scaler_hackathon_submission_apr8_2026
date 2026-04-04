@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -10,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from env.fridge_env import FridgeEnv
-from env.models import Action, Observation, Reward
+from env.models import Action, Observation
 
 app = FastAPI(
     title="FridgeEnv",
@@ -72,42 +71,48 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
     req_id = body.get("id", 1)
 
     if method == "initialize":
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "serverInfo": {"name": "FridgeEnv", "version": "1.0.0"},
-            },
-        })
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "FridgeEnv", "version": "1.0.0"},
+                },
+            }
+        )
 
     if method == "tools/list":
-        return JSONResponse({
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {
-                "tools": [
-                    {
-                        "name": "reset",
-                        "description": "Reset environment with task_id and seed",
-                        "inputSchema": Action.model_json_schema(),
-                    },
-                    {
-                        "name": "step",
-                        "description": "Submit a meal plan action",
-                        "inputSchema": Action.model_json_schema(),
-                    },
-                ]
-            },
-        })
+        return JSONResponse(
+            {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "tools": [
+                        {
+                            "name": "reset",
+                            "description": "Reset environment with task_id and seed",
+                            "inputSchema": Action.model_json_schema(),
+                        },
+                        {
+                            "name": "step",
+                            "description": "Submit a meal plan action",
+                            "inputSchema": Action.model_json_schema(),
+                        },
+                    ]
+                },
+            }
+        )
 
     # Default: return empty result
-    return JSONResponse({
-        "jsonrpc": "2.0",
-        "id": req_id,
-        "result": {},
-    })
+    return JSONResponse(
+        {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {},
+        }
+    )
 
 
 # ── Core Environment Endpoints ───────────────────────────────────────
