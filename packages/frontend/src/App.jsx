@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import FridgeView from "./components/FridgeView.jsx";
 import MealTimeline from "./components/MealTimeline.jsx";
 import ScoreCard from "./components/ScoreCard.jsx";
