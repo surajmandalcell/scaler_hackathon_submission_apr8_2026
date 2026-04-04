@@ -30,9 +30,9 @@
   --sans: "Instrument Sans", system-ui, sans-serif;
   --mono: "IBM Plex Mono", monospace;
 
-  /* Radius */
-  --r: 8px;
-  --r-lg: 12px;
+  /* Radius — sharp, technical */
+  --r: 4px;
+  --r-lg: 6px;
 }
 
 *, *::before, *::after {

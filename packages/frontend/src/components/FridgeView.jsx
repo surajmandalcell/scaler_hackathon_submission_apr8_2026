@@ -36,7 +36,7 @@ export default function FridgeView({ inventory, currentDate, horizon, householdS
         {/* Table header */}
         <div style={{
           display: "grid", gridTemplateColumns: "1fr 100px 80px",
-          padding: "10px 20px", borderBottom: "1px solid var(--line)",
+          padding: "12px 24px", borderBottom: "1px solid var(--line)",
           fontFamily: "var(--mono)", fontSize: "0.65rem", color: "var(--t4)",
           textTransform: "uppercase", letterSpacing: "0.06em",
         }}>
@@ -53,7 +53,7 @@ export default function FridgeView({ inventory, currentDate, horizon, householdS
           return (
             <div key={item.name} className="enter" style={{
               display: "grid", gridTemplateColumns: "1fr 100px 80px",
-              padding: "10px 20px", alignItems: "center",
+              padding: "12px 24px", alignItems: "center",
               borderBottom: i < sorted.length - 1 ? "1px solid var(--line)" : "none",
               background: urgent ? "rgba(160, 75, 58, 0.04)" : "transparent",
               animationDelay: `${i * 20}ms`,

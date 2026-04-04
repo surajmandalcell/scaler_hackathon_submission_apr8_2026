@@ -7,7 +7,7 @@ export default function ScoreCard({ reward }) {
   return (
     <section className="enter" style={{
       background: "var(--bg-raised)", border: "1px solid var(--line)",
-      borderRadius: "var(--r-lg)", padding: "32px",
+      borderRadius: "var(--r-lg)", padding: "36px",
     }}>
       {/* Score + metrics row */}
       <div style={{ display: "flex", gap: 40, alignItems: "flex-start" }}>

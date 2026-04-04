@@ -78,7 +78,7 @@ export default function App() {
   }, [observation]);
 
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", padding: "48px 24px 80px" }}>
+    <div style={{ maxWidth: 980, margin: "0 auto", padding: "56px 32px 96px" }}>
 
       {/* ── Header ── */}
       <header style={{ marginBottom: 48 }}>
@@ -99,7 +99,7 @@ export default function App() {
       {/* ── Controls ── */}
       <div className="enter" style={{
         display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap",
-        marginBottom: 40, paddingBottom: 24, borderBottom: "1px solid var(--line)",
+        marginBottom: 48, paddingBottom: 28, borderBottom: "1px solid var(--line)",
       }}>
         {/* Task pills */}
         <div style={{ display: "flex", gap: 2 }}>
@@ -160,7 +160,7 @@ export default function App() {
 
       {/* ── Content ── */}
       {observation && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
           <FridgeView
             inventory={observation.inventory}
             currentDate={observation.current_date}

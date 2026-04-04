@@ -10,7 +10,7 @@ export default function MealTimeline({ consumptionLog, nutritionLog, horizon, ex
   return (
     <section className="enter" style={{
       background: "var(--bg-raised)", border: "1px solid var(--line)",
-      borderRadius: "var(--r-lg)", padding: "28px 32px",
+      borderRadius: "var(--r-lg)", padding: "32px 36px",
     }}>
       {/* Nutrition grid */}
       <div style={{ marginBottom: 28 }}>
