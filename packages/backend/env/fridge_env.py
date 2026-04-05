@@ -23,9 +23,20 @@ class FridgeEnv:
         self._task_id: str | None = None
         self._seed: int | None = None
 
-    def reset(self, task_id: str, seed: int = 0) -> Observation:
-        """Generate a new episode. Returns initial observation."""
-        obs = generate_observation(seed, task_id)
+    def reset(
+        self,
+        task_id: str = "custom",
+        seed: int = 0,
+        custom_observation: Observation | None = None,
+    ) -> Observation:
+        """Generate a new episode. Returns initial observation.
+
+        If custom_observation is provided, uses it directly instead of generating.
+        """
+        if custom_observation is not None:
+            obs = custom_observation
+        else:
+            obs = generate_observation(seed, task_id)
         self._observation = obs
         self._original_inventory = list(obs.inventory)
         self._inventory = {item.name: item.quantity for item in obs.inventory}

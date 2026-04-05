@@ -13,6 +13,7 @@ describe("App", () => {
     expect(screen.getByText("Easy")).toBeInTheDocument();
     expect(screen.getByText("Medium")).toBeInTheDocument();
     expect(screen.getByText("Hard")).toBeInTheDocument();
+    expect(screen.getByText("Custom")).toBeInTheDocument();
   });
 
   it("renders the Generate button", () => {
@@ -30,8 +31,8 @@ describe("App", () => {
     expect(screen.getByDisplayValue("42")).toBeInTheDocument();
   });
 
-  it("renders the footer", () => {
+  it("has docs button", () => {
     render(<App />);
-    expect(screen.getByText(/Scaler x Meta/)).toBeInTheDocument();
+    expect(screen.getByText("Docs")).toBeInTheDocument();
   });
 });

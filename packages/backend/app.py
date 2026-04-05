@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from env.fridge_env import FridgeEnv
-from env.models import Action, Observation
+from env.models import Action, FridgeItem, Observation
 
 app = FastAPI(
     title="FridgeEnv",
@@ -122,9 +122,34 @@ async def mcp_endpoint(request: Request) -> JSONResponse:
 def reset(body: dict) -> dict:
     task_id = body.get("task_id", "easy")
     seed = body.get("seed", 0)
+    custom_inventory = body.get("inventory")
+
     try:
-        obs = env.reset(task_id=task_id, seed=seed)
-    except ValueError as e:
+        if custom_inventory:
+            # Custom inventory mode — build Observation from user data
+            from datetime import date
+
+            items = [
+                FridgeItem(
+                    name=i["name"],
+                    quantity=i["quantity"],
+                    unit=i.get("unit", "g"),
+                    expiry_date=i["expiry_date"],
+                    category=i.get("category", "protein"),
+                )
+                for i in custom_inventory
+            ]
+            custom_obs = Observation(
+                inventory=items,
+                current_date=body.get("current_date", date.today().isoformat()),
+                horizon=body.get("horizon", 7),
+                household_size=body.get("household_size", 2),
+                dietary_restrictions=body.get("dietary_restrictions", []),
+            )
+            obs = env.reset(task_id="custom", custom_observation=custom_obs)
+        else:
+            obs = env.reset(task_id=task_id, seed=seed)
+    except (ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from None
     return obs.model_dump(mode="json")
 
