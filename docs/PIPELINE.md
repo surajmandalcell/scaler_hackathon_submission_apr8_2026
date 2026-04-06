@@ -10,16 +10,16 @@ This document explains exactly what happens at every stage, what role each compo
 ┌─────────────────────────────────────────────────────────────────┐
 │                        WE BUILT THIS                            │
 │                                                                 │
-│   ┌──────────┐    ┌──────────────┐    ┌────────────────────┐   │
-│   │ Generator │───▶│ Environment  │───▶│ Scorer / Grader    │   │
-│   │ (seed+rng)│    │ (simulation) │    │ (reward function)  │   │
-│   └──────────┘    └──────┬───────┘    └────────────────────┘   │
+│   ┌──────────┐    ┌──────────────┐    ┌────────────────────┐    │
+│   │ Generator│───▶│ Environment  │───▶│ Scorer / Grader    │    │
+│   │(seed+rng)│    │ (simulation) │    │ (reward function)  │    │
+│   └──────────┘    └──────┬───────┘    └────────────────────┘    │
 │                          │                                      │
 │                    ┌─────▼─────┐                                │
-│                    │ FastAPI   │                                 │
-│                    │ /reset    │                                 │
-│                    │ /step     │                                 │
-│                    │ /state    │                                 │
+│                    │ FastAPI   │                                │
+│                    │ /reset    │                                │
+│                    │ /step     │                                │
+│                    │ /state    │                                │
 │                    └─────┬─────┘                                │
 │                          │                                      │
 └──────────────────────────┼──────────────────────────────────────┘
@@ -83,6 +83,7 @@ generator.py
 **Output:** An `Observation` JSON with inventory, dates, constraints.
 
 **Why seeded RNG matters for RL:**
+
 - Agent trains on seed 0..99999, each producing a different fridge
 - Same seed = same fridge = reproducible benchmarks
 - You can compare two agents on the exact same 1000 scenarios
@@ -97,14 +98,17 @@ generator.py
 The agent receives the observation and must return a meal plan. Three baseline agents show different strategies:
 
 **Random Agent** — No intelligence
+
 ```
 For each day:
     Pick 2-4 random items
     Use 10-50% of available quantity
 ```
+
 Result: ~63-72% score. Wastes most food.
 
 **FIFO Agent** — Simple heuristic
+
 ```
 Sort items by expiry date (soonest first)
 For each day:
@@ -112,18 +116,22 @@ For each day:
     Then spread remaining items across days
     Try to hit protein + carb + vegetable
 ```
+
 Result: ~99% score. Touches everything but ignores dietary restrictions.
 
 **LLM Agent (inference.py)** — Language model reasoning
+
 ```
 Format fridge inventory as text prompt
 Send to GLM-5.1 / GPT-4o via OpenAI API
 Parse JSON response into meal plan
 ```
+
 Result: 97% easy, 73% medium, 68% hard. Understands restrictions but
 struggles with combinatorial planning on large inventories.
 
 **Future RL Agent** — This is the whole point
+
 ```
 A reinforcement learning model that trains against our environment:
     for episode in range(1_000_000):
@@ -132,6 +140,7 @@ A reinforcement learning model that trains against our environment:
         obs, reward, done, info = env.step(action)
         model.update(reward)             ← gradient descent
 ```
+
 This is what researchers would build. Our environment provides the
 training loop's reset/step/reward cycle. We don't train the model —
 we provide the gym it trains in.
@@ -200,7 +209,7 @@ Grader Score (what OpenEnv validation checks):
   perishable_items = items where category != "condiment"
   used_items = perishable items where consumption > 0
   score = used_items / total_perishable_items
-  
+
   Range: 0.0 (nothing used) to 1.0 (everything touched)
 
 Waste Rate:
@@ -215,6 +224,7 @@ Violation Count:
 ```
 
 **Why the scoring matters for RL:**
+
 - The grader score is what gets reported to the hackathon judges
 - But the detailed signals (waste, nutrition, violations) are what
   an RL agent would use as its reward function during training
@@ -251,6 +261,7 @@ print(f"Trained agent scores: {mean_reward}")
 ```
 
 The seeded RNG ensures:
+
 - Training uses random seeds → agent sees diverse fridges
 - Evaluation uses fixed seeds → fair comparison between agents
 - Same eval seeds for all agents → apples-to-apples benchmark
@@ -279,10 +290,10 @@ openenv.yaml       → Environment metadata for OpenEnv registry
 
 ## Why This Design Gets Points
 
-| Hackathon Criteria | How Our Pipeline Addresses It |
-|---|---|
-| **Real-world utility (30%)** | Food waste is a $1T/year problem. The simulation models actual fridge dynamics — expiry dates, dietary needs, portion planning |
-| **Task quality (25%)** | Three difficulty tiers. Deterministic seeded generation. Hard mode creates genuine combinatorial pressure (30 items, 14 days, 2 restrictions, expiry clusters) |
-| **Environment design (20%)** | Clean reset/step/state cycle. Rich reward signal (not just pass/fail). Single-step episodes with day-by-day internal simulation |
-| **Code quality (15%)** | 137 tests. Typed Pydantic models. OpenEnv validate 6/6. Docker deployment |
-| **Creativity (10%)** | Novel domain. Dietary restrictions as constraints. Expiry clustering as difficulty mechanic. Nutrition balance as secondary objective |
+| Hackathon Criteria           | How Our Pipeline Addresses It                                                                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Real-world utility (30%)** | Food waste is a $1T/year problem. The simulation models actual fridge dynamics — expiry dates, dietary needs, portion planning                                 |
+| **Task quality (25%)**       | Three difficulty tiers. Deterministic seeded generation. Hard mode creates genuine combinatorial pressure (30 items, 14 days, 2 restrictions, expiry clusters) |
+| **Environment design (20%)** | Clean reset/step/state cycle. Rich reward signal (not just pass/fail). Single-step episodes with day-by-day internal simulation                                |
+| **Code quality (15%)**       | 137 tests. Typed Pydantic models. OpenEnv validate 6/6. Docker deployment                                                                                      |
+| **Creativity (10%)**         | Novel domain. Dietary restrictions as constraints. Expiry clustering as difficulty mechanic. Nutrition balance as secondary objective                          |
