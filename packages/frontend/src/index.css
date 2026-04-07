@@ -1421,37 +1421,49 @@ pre code {
 }
 
 /* ============================================================
-   Motion -- MD3 transition patterns
+   Motion -- MD3 shared-axis transitions
    ----------------------------------------------------------------
-   Three patterns from the MD3 motion spec, plus a stagger helper:
-     md-axis-x  -- shared axis on X. Use for switching between
-                   sibling top-level views (Analyst <-> Admin).
-     md-axis-y  -- shared axis on Y. Use for navigating between
-                   hierarchically related screens (sub-tabs).
-     md-fade-through -- fade through. Use when content swaps with
-                        no spatial relationship (modal overlays).
-     md-fade-in -- minimal fade for one-off appearances.
-     md-stagger -- container that stages its direct children with
-                   a 60ms delay each, capped at 8 items so the
-                   tail of long lists isn't visibly delayed.
-   All animations honour the standard MD3 emphasized easing curve
-   and the prefers-reduced-motion media query.
+   Pattern: an outgoing layer animates OUT while a new incoming
+   layer animates IN, both stacked inside an `md-axis-stage`. The
+   React side holds the previous view mounted long enough to play
+   the out-animation, then drops it. Without the outgoing layer
+   the perceived effect is a hard cut even though the new layer is
+   technically animating in.
+
+   .md-axis-stage      -- the container; relative + isolated.
+   .md-axis-layer      -- a child of the stage.
+   .md-axis-layer--in  -- the incoming child; in-flow, plays *-in.
+   .md-axis-layer--out -- the outgoing child; absolute + on top,
+                          plays *-out then is removed by React.
+   .md-axis-x          -- horizontal shared axis (top-level views).
+   .md-axis-y          -- vertical shared axis (sub-tab content).
+   .md-axis-y-soft     -- vertical fade-only for chrome (header).
+   .md-stagger         -- container for staged grid item entrances.
    ============================================================ */
 
 @keyframes md-axis-x-in {
-  from { opacity: 0; transform: translate3d(30px, 0, 0); }
+  from { opacity: 0; transform: translate3d(72px, 0, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes md-axis-x-out {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to   { opacity: 0; transform: translate3d(-72px, 0, 0); }
 }
 
 @keyframes md-axis-y-in {
-  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  from { opacity: 0; transform: translate3d(0, 32px, 0); }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-@keyframes md-fade-through-in {
-  0%   { opacity: 0; transform: scale(0.92); }
-  35%  { opacity: 0; }
-  100% { opacity: 1; transform: scale(1); }
+@keyframes md-axis-y-out {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to   { opacity: 0; transform: translate3d(0, -32px, 0); }
+}
+
+@keyframes md-axis-y-soft-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 @keyframes md-fade-in {
@@ -1464,16 +1476,59 @@ pre code {
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* ── Stage that holds in/out layers ─────────────────────────── */
+
+.md-axis-stage {
+  position: relative;
+  isolation: isolate;
+}
+
+.md-axis-stage > .md-axis-layer {
+  width: 100%;
+}
+
+/* The outgoing layer is taken out of flow so it doesn't push the incoming
+   layer down. The incoming layer keeps its natural flow, which means the
+   stage height tracks the new content. */
+.md-axis-stage > .md-axis-layer--out {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.md-axis-stage > .md-axis-layer--in {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Stage-aware layer animations ───────────────────────────── */
+
+.md-axis-x.md-axis-layer--in {
+  animation: md-axis-x-in 460ms var(--md-easing-emphasized) both;
+}
+.md-axis-x.md-axis-layer--out {
+  animation: md-axis-x-out 320ms var(--md-easing-emphasized) both;
+}
+.md-axis-y.md-axis-layer--in {
+  animation: md-axis-y-in 360ms var(--md-easing-emphasized) both;
+}
+.md-axis-y.md-axis-layer--out {
+  animation: md-axis-y-out 240ms var(--md-easing-emphasized) both;
+}
+
+/* ── Standalone helpers (no stage / first paint) ────────────── */
+
 .md-axis-x {
-  animation: md-axis-x-in var(--md-duration-long) var(--md-easing-emphasized) both;
+  animation: md-axis-x-in 460ms var(--md-easing-emphasized) both;
 }
 
 .md-axis-y {
-  animation: md-axis-y-in var(--md-duration-medium) var(--md-easing-emphasized) both;
+  animation: md-axis-y-in 360ms var(--md-easing-emphasized) both;
 }
 
-.md-fade-through {
-  animation: md-fade-through-in var(--md-duration-long) var(--md-easing-emphasized) both;
+.md-axis-y-soft {
+  animation: md-axis-y-soft-in 360ms var(--md-easing-emphasized) both;
 }
 
 .md-fade-in {
@@ -1484,10 +1539,10 @@ pre code {
   animation: md-scale-in var(--md-duration-medium) var(--md-easing-standard) both;
 }
 
-/* Stagger container -- each direct child appears with a 60ms delay.
-   Limited to 8 children so a long list doesn't have a visibly slow tail. */
+/* Stagger container -- each direct child appears with a 50ms delay,
+   capped at 8 children so a long list doesn't have a visibly slow tail. */
 .md-stagger > * {
-  animation: md-axis-y-in var(--md-duration-medium) var(--md-easing-emphasized) both;
+  animation: md-axis-y-in 380ms var(--md-easing-emphasized) both;
 }
 .md-stagger > *:nth-child(1) { animation-delay: 0ms;   }
 .md-stagger > *:nth-child(2) { animation-delay: 50ms;  }
@@ -1498,9 +1553,7 @@ pre code {
 .md-stagger > *:nth-child(7) { animation-delay: 270ms; }
 .md-stagger > *:nth-child(n+8) { animation-delay: 300ms; }
 
-/* Container lift -- pairs with .md-card-interactive. The base card class
-   already has a transition; this rule strengthens the hover/active states
-   so the elevation change reads as a deliberate MD3 surface motion. */
+/* Container lift -- pairs with .md-card-interactive. */
 .md-card-interactive {
   transition: transform var(--md-duration-medium) var(--md-easing-emphasized),
               box-shadow var(--md-duration-medium) var(--md-easing-emphasized),
@@ -1508,28 +1561,34 @@ pre code {
   will-change: transform;
 }
 .md-card-interactive:hover {
-  transform: translateY(-2px);
+  transform: translate3d(0, -3px, 0) scale(1.01);
   box-shadow: var(--md-elev-3);
 }
 .md-card-interactive:active {
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0) scale(0.99);
   box-shadow: var(--md-elev-1);
   transition-duration: var(--md-duration-short);
 }
-
-/* Smooth navigation rail underline indicator that slides between items. */
-.md-rail-item {
-  transition: color var(--md-duration-medium) var(--md-easing-emphasized);
+.md-card-interactive:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 3px;
 }
 
+/* Reduced motion: collapse all axis-* animations to a near-instant
+   crossfade so users still get visual feedback without movement. We
+   deliberately do NOT zero out component-level transitions (state
+   layers, focus rings, etc) -- only the big shared-axis pattern. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  .md-axis-x,
+  .md-axis-y,
+  .md-axis-y-soft,
+  .md-axis-x.md-axis-layer--in,
+  .md-axis-x.md-axis-layer--out,
+  .md-axis-y.md-axis-layer--in,
+  .md-axis-y.md-axis-layer--out,
+  .md-stagger > * {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
   }
 }
 
@@ -1653,4 +1712,114 @@ pre code {
 .admin-upload:hover {
   border-color: var(--md-primary);
   background: var(--md-surface-container);
+}
+
+/* ============================================================
+   Microinteractions
+   ----------------------------------------------------------------
+   Small refinements that turn the static MD3 chrome into something
+   that actually responds to hover/press/focus the way the spec
+   describes. Each rule extends an existing class -- nothing here
+   defines a new variant or layout primitive.
+   ============================================================ */
+
+/* ── Buttons: true state-layer overlay via ::before ──────────────
+   The base .md-btn already has overflow:hidden + position:relative
+   (set in the main button block above). The pseudo-element sits
+   underneath the label and tinted with currentColor at the MD3
+   state-layer opacities.
+   ============================================================ */
+.md-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  border-radius: inherit;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--md-duration-short) var(--md-easing-standard);
+}
+.md-btn:hover:not(:disabled)::before { opacity: var(--md-state-hover); }
+.md-btn:focus-visible:not(:disabled)::before { opacity: var(--md-state-focus); }
+.md-btn:active:not(:disabled)::before { opacity: var(--md-state-pressed); }
+
+/* Filled buttons need a darker overlay because their base is the
+   primary color -- a currentColor (white) overlay would invisibly
+   brighten an already-bright surface. Override to a black tint. */
+.md-btn-filled::before { background: rgb(0 0 0); }
+.md-btn-filled:hover:not(:disabled)::before { opacity: 0.10; }
+.md-btn-filled:active:not(:disabled)::before { opacity: 0.16; }
+
+/* Tonal / outlined / text already use a colored currentColor overlay
+   that composites well, so no override needed. */
+
+.md-btn-filled:active:not(:disabled) {
+  box-shadow: var(--md-elev-1);
+}
+
+/* ── Chips: gentle scale pulse on selection toggle ─────────────── */
+@keyframes md-chip-pulse {
+  0%   { transform: scale(0.94); }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.md-chip.is-selected {
+  animation: md-chip-pulse 320ms var(--md-easing-emphasized) both;
+}
+
+/* ── Sub-tabs: sliding underline indicator ───────────────────────
+   The existing rule animates the underline ON FIRST APPEARANCE only
+   (because each tab uses ::after that lives on the active element).
+   Add a translate-from-prev animation so when the user switches
+   tabs the new underline appears to slide in from below. */
+@keyframes md-tab-underline-slide {
+  from {
+    transform: scaleX(0) translateY(4px);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(1) translateY(0);
+    opacity: 1;
+  }
+}
+.md-tab-sub.is-active::after {
+  animation: md-tab-underline-slide 320ms var(--md-easing-emphasized) both;
+}
+
+/* ── Form fields: focus halo around the surface ────────────────── */
+.md-input:focus,
+.md-select:focus {
+  box-shadow: 0 0 0 4px rgba(103, 80, 164, 0.16);
+}
+
+/* ── Cards: dramatic interactive lift ────────────────────────────
+   The motion section already defined transform + box-shadow on
+   .md-card-interactive. This rule adds a colored glow under the
+   card on hover so the lift reads as "this is reachable". */
+.md-card-interactive {
+  position: relative;
+}
+.md-card-interactive:hover {
+  box-shadow: var(--md-elev-3),
+              0 16px 32px -16px rgba(103, 80, 164, 0.25);
+}
+
+/* ── Nav rail icon entrance ──────────────────────────────────────
+   The pill grows in via scaleX on .md-rail-icon::before. Add a
+   subtle scale on the icon SVG itself so it pops alongside the
+   pill. The base rule already covers stroke-width on activation. */
+.md-rail-item.is-active .md-rail-icon svg {
+  transform: scale(1.05);
+}
+
+/* ── Reduced motion fallback for the additions above ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  .md-chip.is-selected,
+  .md-tab-sub.is-active::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
 }

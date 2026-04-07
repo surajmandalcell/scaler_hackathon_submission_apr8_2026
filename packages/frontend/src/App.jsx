@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import NavRail from "./components/NavRail.jsx";
 import AnalystView from "./components/AnalystView.jsx";
 import AdminView from "./components/AdminView.jsx";
@@ -27,12 +27,78 @@ const VIEW_HEADERS = {
   docs:       { eyebrow: "Persona", title: "Docs",       sub: "Reference for tools, formulas, and grading." },
 };
 
+// How long the outgoing layer is kept mounted, in ms.
+// Must be >= the longest md-axis-x-out duration in index.css.
+const TRANSITION_HOLD_MS = 420;
+
+function renderView(view, ctx) {
+  const { taskId, setTaskId, scenario, loading, loadError, loadScenario, onStoreMutated } = ctx;
+  switch (view) {
+    case "analyst":
+      return (
+        <AnalystView
+          taskId={taskId}
+          setTaskId={setTaskId}
+          scenario={scenario}
+          loading={loading}
+          loadError={loadError}
+          onLoadScenario={loadScenario}
+        />
+      );
+    case "admin":
+      return (
+        <AdminView
+          taskId={taskId}
+          setTaskId={setTaskId}
+          scenario={scenario}
+          onStoreMutated={onStoreMutated}
+        />
+      );
+    case "investor":
+      return <InvestorView scenario={scenario} taskId={taskId} />;
+    case "playground":
+      return <Playground />;
+    case "docs":
+      return <DocsPage />;
+    default:
+      return null;
+  }
+}
+
 export default function App() {
   const [view, setView] = useState("analyst");
   const [taskId, setTaskId] = useState("easy");
   const [scenario, setScenario] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
+
+  // Shared-axis transition state. We keep the previous view mounted for
+  // TRANSITION_HOLD_MS so it can animate OUT while the new view animates IN.
+  // `transitionKey` increments on every change so React forces a real
+  // remount even if `view` cycles back to a prior value -- without this,
+  // CSS keyframes only fire on element insertion and the user perceives a
+  // hard cut.
+  const [previousView, setPreviousView] = useState(null);
+  const [transitionKey, setTransitionKey] = useState(0);
+  const holdTimer = useRef(null);
+
+  const handleSetView = useCallback((next) => {
+    setView((current) => {
+      if (current === next) return current;
+      setPreviousView(current);
+      setTransitionKey((k) => k + 1);
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+      holdTimer.current = setTimeout(() => {
+        setPreviousView(null);
+        holdTimer.current = null;
+      }, TRANSITION_HOLD_MS);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+  }, []);
 
   const refreshPortfolio = useCallback(async () => {
     try {
@@ -74,14 +140,20 @@ export default function App() {
   }, [refreshPortfolio]);
 
   const header = VIEW_HEADERS[view];
+  const ctx = { taskId, setTaskId, scenario, loading, loadError, loadScenario, onStoreMutated };
 
   return (
     <div className="app-shell">
-      <NavRail items={VIEWS} current={view} onChange={setView} />
+      <NavRail items={VIEWS} current={view} onChange={handleSetView} />
 
       <div className="app-body">
         <div className="app-body-inner">
-          <header className="app-header">
+          <header
+            className="app-header md-axis-y-soft"
+            // Re-key the header on view change so the title fades+slides
+            // alongside the main content.
+            key={`header-${transitionKey}`}
+          >
             <div className="app-brand">
               <p className="md-eyebrow">{header.eyebrow}</p>
               <h1 className="app-title">{header.title}</h1>
@@ -89,34 +161,25 @@ export default function App() {
             </div>
           </header>
 
-          <main className="app-main md-axis-x" key={view}>
-            {view === "analyst" && (
-              <AnalystView
-                taskId={taskId}
-                setTaskId={setTaskId}
-                scenario={scenario}
-                loading={loading}
-                loadError={loadError}
-                onLoadScenario={loadScenario}
-              />
-            )}
-
-            {view === "admin" && (
-              <AdminView
-                taskId={taskId}
-                setTaskId={setTaskId}
-                scenario={scenario}
-                onStoreMutated={onStoreMutated}
-              />
-            )}
-
-            {view === "investor" && (
-              <InvestorView scenario={scenario} taskId={taskId} />
-            )}
-
-            {view === "playground" && <Playground />}
-
-            {view === "docs" && <DocsPage />}
+          <main className="app-main">
+            <div className="md-axis-stage" data-testid="view-stage">
+              {previousView && previousView !== view && (
+                <div
+                  key={`out-${transitionKey}`}
+                  className="md-axis-layer md-axis-layer--out md-axis-x"
+                  aria-hidden="true"
+                >
+                  {renderView(previousView, ctx)}
+                </div>
+              )}
+              <div
+                key={`in-${transitionKey}-${view}`}
+                className="md-axis-layer md-axis-layer--in md-axis-x"
+                data-testid="view-layer-in"
+              >
+                {renderView(view, ctx)}
+              </div>
+            </div>
           </main>
 
           <footer className="app-footer">
