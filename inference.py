@@ -1,202 +1,205 @@
-"""LLM-based baseline agent for FridgeEnv using OpenAI API.
-
-Runs 5 episodes per difficulty (easy, medium, hard) = 15 total LLM calls.
-Saves everything to outputs/ directory.
-
-Environment variables:
-    OPENAI_API_KEY  - API key (required)
-    API_BASE_URL    - LLM API base URL (default: https://api.openai.com/v1)
-    MODEL_NAME      - Model to use (default: gpt-4o-mini)
-    ENV_SERVER_URL  - FridgeEnv server URL (default: http://localhost:7860)
 """
+Inference Script — FundLens Baseline Agent
+==========================================
+Environment variables required:
+  API_BASE_URL   LLM endpoint (default: HuggingFace router)
+  MODEL_NAME     Model identifier
+  HF_TOKEN       API key / HuggingFace token
 
-from __future__ import annotations
-
-import json
+Run:
+  python inference.py
+"""
 import os
-import sys
-from datetime import datetime
-from pathlib import Path
-
-import httpx
+import json
+import textwrap
 from openai import OpenAI
+from openenv.core.env_server import CallToolAction
+from fundlens.server.environment import FundLensEnvironment
 
-# Resolve paths relative to this script, not CWD
-SCRIPT_DIR = Path(__file__).parent.resolve()
-OUTPUT_DIR = SCRIPT_DIR / "outputs"
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+API_KEY      = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "no-key")
+MODEL_NAME   = os.getenv("MODEL_NAME", "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF")
+MAX_STEPS    = 8
+TEMPERATURE  = 0.1
+MAX_TOKENS   = 1500
 
-ENV_SERVER_URL = os.environ.get("ENV_SERVER_URL", "http://localhost:7860")
-API_BASE_URL = os.environ.get("API_BASE_URL", None)
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+SYSTEM_PROMPT = textwrap.dedent("""
+    You are a PE fund analyst using the FundLens reporting platform.
+    Use MCP tools to compute NAV bridges and performance metrics for the fund.
 
-SYSTEM_PROMPT = """You are a meal planning agent. Given a fridge inventory with expiry dates, produce a meal plan that minimizes food waste.
+    Available tools:
+    - get_available_filters() — discover fund_ids, deal_ids, sectors
+    - get_portfolio_summary(funds) — MOIC, DPI, RVPI, TVPI, IRR per fund
+    - get_nav_bridge(fund_id) — 12-line NAV walk in USD millions
+    - get_irr(fund_id, irr_type) — IRR: "pre_fx" | "post_fx" | "both"
+    - compare_funds(funds, metrics) — side-by-side fund comparison
+    - get_sector_report(sector, funds) — breakdown by property sector
+    - get_deal_exposure(deal_id) — cross-fund consolidation for a deal
+    - submit_report(nav_bridge, metrics) — SUBMIT AND GRADE YOUR WORK
 
-Rules:
-- Prioritize items expiring soonest — use them first
-- Each day should include protein, carb, and vegetable for balanced nutrition
-- Respect dietary restrictions — never use restricted items
-- Use realistic portions (100-300g per ingredient per meal)
-- Plan meals for EVERY day in the horizon
+    Workflow:
+    1. get_available_filters() → identify which fund to analyze
+    2. get_nav_bridge(fund_id) → get the 12-line NAV bridge
+    3. get_portfolio_summary(funds) → get MOIC/DPI/RVPI/TVPI
+    4. get_irr(fund_id, "both") → get IRR values
+    5. submit_report(nav_bridge, metrics) → done
 
-Return ONLY valid JSON matching this schema:
-{"meal_plan": [{"day": int, "meal_name": string, "ingredients": [{"name": string, "quantity": float}]}]}"""
+    NAV Bridge keys: beginning_nav, contribution, roc, gl_on_investment,
+    gl_of_fx, current_income, cashflow_adjusted_nav, income_reversal,
+    debt_mtm, write_up_down, ending_nav
 
-USER_TEMPLATE = """Fridge inventory:
-{inventory}
+    Metrics keys: moic, dpi, rvpi, tvpi, irr_post_fx, irr_pre_fx, fx_attribution
 
-Planning horizon: {horizon} days
-Household size: {household_size} people
-Dietary restrictions: {restrictions}
-Current date: {current_date}
+    Respond ONLY with a JSON object (no markdown, no prose):
+    {
+      "tool": "tool_name",
+      "arguments": {"param": "value"}
+    }
+""").strip()
 
-Create a meal plan that uses as many items as possible before they expire. Return JSON only."""
 
-
-def format_inventory(items: list[dict]) -> str:
-    lines = []
-    for item in items:
-        lines.append(
-            f"  - {item['name']}: {item['quantity']}{item['unit']}, "
-            f"expires {item['expiry_date']}, category: {item['category']}"
+def call_llm(client: OpenAI, messages: list) -> str:
+    try:
+        resp = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
         )
-    return "\n".join(lines)
+        return resp.choices[0].message.content or ""
+    except Exception as exc:
+        print(f"  [LLM error: {exc}]")
+        return ""
 
 
-def run_inference() -> dict:
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        print("ERROR: OPENAI_API_KEY not set", file=sys.stderr)
-        sys.exit(1)
+def parse_tool_call(text: str) -> dict | None:
+    """Extract first JSON object from LLM response."""
+    text = text.strip()
+    start = text.find("{")
+    end   = text.rfind("}") + 1
+    if start == -1 or end == 0:
+        return None
+    try:
+        return json.loads(text[start:end])
+    except json.JSONDecodeError:
+        return None
 
-    # Create outputs directory
-    OUTPUT_DIR.mkdir(exist_ok=True)
-    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = OUTPUT_DIR / run_id
-    run_dir.mkdir(exist_ok=True)
 
-    # Build OpenAI client
-    client_kwargs = {"api_key": api_key}
-    if API_BASE_URL:
-        client_kwargs["base_url"] = API_BASE_URL
-    client = OpenAI(**client_kwargs)
+def run_task(env: FundLensEnvironment, client: OpenAI, task_id: str) -> float:
+    print(f"\n{'='*60}")
+    print(f"  Task: {task_id.upper()}")
+    print(f"{'='*60}")
 
-    server = httpx.Client(base_url=ENV_SERVER_URL, timeout=60.0)
+    obs = env.reset(task_id=task_id)
+    print(f"  Raj asks: {obs.task_description}")
+    print(f"  Funds in scope: {obs.available_funds}")
+    print(f"  Portfolio NAV: ${obs.portfolio_nav_usd:.2f}M")
 
-    print(f"LLM: {MODEL_NAME} @ {API_BASE_URL or 'default OpenAI'}")
-    print(f"Env: {ENV_SERVER_URL}")
-    print(f"Output: {run_dir}")
-    print()
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": (
+            f"Task: {obs.task_description}\n"
+            f"Funds available: {obs.available_funds}\n"
+            f"Portfolio NAV: ${obs.portfolio_nav_usd:.2f}M\n\n"
+            "Start by calling get_available_filters() to confirm what data is loaded."
+        )},
+    ]
 
-    results: dict = {}
-    all_episodes: list[dict] = []
+    nav_bridge_cache: dict = {}
+    metrics_cache: dict = {}
+    reward = 0.0
 
-    for task_id in ["easy", "medium", "hard"]:
-        scores = []
-        task_dir = run_dir / task_id
-        task_dir.mkdir(exist_ok=True)
+    for step in range(1, MAX_STEPS + 1):
+        print(f"\n  Step {step}/{MAX_STEPS}")
 
-        for seed in range(5):
-            print(f"  {task_id} seed={seed}...", end=" ", flush=True)
+        if env.state.is_done:
+            break
 
-            # Reset environment
-            obs = server.post("/reset", json={"task_id": task_id, "seed": seed}).json()
+        response = call_llm(client, messages)
+        print(f"  LLM: {response[:300]}")
 
-            # Build LLM prompt
-            user_msg = USER_TEMPLATE.format(
-                inventory=format_inventory(obs["inventory"]),
-                horizon=obs["horizon"],
-                household_size=obs["household_size"],
-                restrictions=obs.get("dietary_restrictions", []) or "none",
-                current_date=obs["current_date"],
-            )
+        tool_call = parse_tool_call(response)
+        if not tool_call:
+            print("  Could not parse tool call. Prompting again.")
+            messages.append({"role": "assistant", "content": response})
+            messages.append({"role": "user", "content": "Please respond with a valid JSON tool call."})
+            continue
 
-            # Call LLM with retries
-            meal_plan = None
-            raw_response = None
-            for attempt in range(3):
-                try:
-                    response = client.chat.completions.create(
-                        model=MODEL_NAME,
-                        messages=[
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": user_msg},
-                        ],
-                        temperature=0.0,
-                    )
-                    raw_response = response.choices[0].message.content
-                    raw = raw_response.strip()
-                    if raw.startswith("```"):
-                        lines = raw.split("\n")
-                        raw = "\n".join(
-                            l for l in lines if not l.strip().startswith("```")
-                        )
-                    meal_plan = json.loads(raw)
-                    if "meal_plan" not in meal_plan:
-                        meal_plan = None
-                        continue
+        tool_name = tool_call.get("tool", "")
+        arguments = tool_call.get("arguments", {})
+        print(f"  Calling: {tool_name}({json.dumps(arguments)[:120]})")
+
+        step_obs = env.step(CallToolAction(tool_name=tool_name, arguments=arguments))
+        result = step_obs.result.data if step_obs.result else None
+        result_str = json.dumps(result, indent=2)[:600] if result else str(step_obs.error)
+        print(f"  Result: {result_str[:300]}")
+
+        # Cache bridge and metrics so we can auto-submit if LLM forgets
+        if tool_name == "get_nav_bridge" and isinstance(result, dict) and "ending_nav" in result:
+            nav_bridge_cache = result
+        if tool_name in ("get_portfolio_summary", "get_irr") and isinstance(result, dict):
+            # Flatten fund-level data into flat metrics dict
+            for v in result.values():
+                if isinstance(v, dict):
+                    metrics_cache.update(v)
+                else:
+                    metrics_cache.update(result)
                     break
-                except (json.JSONDecodeError, Exception) as e:
-                    print(
-                        f"retry({attempt+1}: {type(e).__name__})",
-                        end=" ",
-                        flush=True,
-                    )
-                    continue
 
-            if meal_plan is None:
-                meal_plan = {"meal_plan": []}
-                print("fallback", end=" ")
+        # Check if reward came back (submit_report was called)
+        if isinstance(result, dict) and "reward" in result:
+            reward = result["reward"]
+            print(f"\n  REWARD: {reward:.4f}")
+            print(f"  Bridge score: {result.get('bridge_score', '?')}")
+            print(f"  Metrics score: {result.get('metrics_score', '?')}")
+            break
 
-            # Submit to environment
-            step_result = server.post("/step", json=meal_plan).json()
-            score = step_result["reward"]["score"]
-            scores.append(score)
-            print(f"score={score:.3f}")
+        messages.append({"role": "assistant", "content": response})
+        messages.append({
+            "role": "user",
+            "content": (
+                f"Tool result for {tool_name}:\n{result_str}\n\n"
+                "Continue. Call the next tool, or call submit_report() if you have "
+                "nav_bridge and metrics values ready."
+            ),
+        })
 
-            # Save episode detail
-            episode = {
-                "task_id": task_id,
-                "seed": seed,
-                "observation": obs,
-                "meal_plan": meal_plan,
-                "raw_llm_response": raw_response,
-                "reward": step_result["reward"],
-                "info": step_result.get("info", {}),
-            }
-            all_episodes.append(episode)
+    else:
+        # Max steps reached — auto-submit with cached values if available
+        if nav_bridge_cache or metrics_cache:
+            print("\n  Max steps reached. Auto-submitting cached values.")
+            sub_obs = env.step(CallToolAction(
+                tool_name="submit_report",
+                arguments={"nav_bridge": nav_bridge_cache, "metrics": metrics_cache},
+            ))
+            result = sub_obs.result.data if sub_obs.result else {}
+            reward = result.get("reward", 0.0) if isinstance(result, dict) else 0.0
+            print(f"  Auto-submit REWARD: {reward:.4f}")
 
-            # Save individual episode file
-            ep_file = task_dir / f"seed_{seed}.json"
-            with open(ep_file, "w") as f:
-                json.dump(episode, f, indent=2, default=str)
+    return reward
 
-        results[task_id] = {
-            "mean_score": sum(scores) / len(scores),
-            "scores": scores,
-            "episodes": len(scores),
-        }
 
-    # Save summary results
-    results_file = run_dir / "results.json"
-    with open(results_file, "w") as f:
-        json.dump(results, f, indent=2)
+def main() -> None:
+    if API_KEY == "no-key":
+        raise EnvironmentError(
+            "No API key found. Set HF_TOKEN or API_KEY environment variable.\n"
+            "Example: export HF_TOKEN=hf_..."
+        )
+    llm_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    env = FundLensEnvironment()
 
-    # Also save to project root for hackathon submission
-    with open(SCRIPT_DIR / "results.json", "w") as f:
-        json.dump(results, f, indent=2)
+    results: dict[str, float] = {}
+    for task_id in ["easy", "medium", "hard"]:
+        results[task_id] = run_task(env, llm_client, task_id)
 
-    print(f"\n{'=' * 50}")
-    print("Results:")
-    for task_id, data in results.items():
-        print(f"  {task_id}: mean={data['mean_score']:.3f} scores={data['scores']}")
-    print(f"\nSaved to: {run_dir}")
-    print(f"  results.json        — score summary")
-    print(f"  easy/seed_0.json    — full episode detail (observation, meal plan, reward)")
-    print(f"  medium/seed_0.json  — ...")
-    print(f"  hard/seed_0.json    — ...")
-
-    return results
+    print(f"\n{'='*60}")
+    print("  FINAL RESULTS")
+    print(f"{'='*60}")
+    for task_id, r in results.items():
+        print(f"  {task_id:8s}: {r:.4f}")
+    avg = sum(results.values()) / len(results)
+    print(f"  {'average':8s}: {avg:.4f}")
 
 
 if __name__ == "__main__":
-    run_inference()
+    main()

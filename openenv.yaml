@@ -1,18 +1,23 @@
-spec_version: 1
-name: FridgeEnv
+name: fundlens
+version: 0.2.0
 description: >
-  Food waste reduction RL benchmark. Agent receives a fridge inventory with
-  expiring items and must plan meals to minimize waste while respecting
-  dietary restrictions and nutritional balance.
-version: 1.0.0
-type: environment
-runtime: docker
-app: app:app
-port: 7860
+  RE Fund NAV Bridge & Performance Environment.
+  AI agents compute NAV bridges and performance metrics
+  for real estate private equity funds.
 tasks:
   - id: easy
-    description: 5-8 items, 3-day horizon, 2 people, no dietary restrictions
+    description: "RE Alpha Fund I -- 3 properties, 100% owned, NAV bridge only"
+    difficulty: easy
+    graded_items: 8
   - id: medium
-    description: 10-15 items, 7-day horizon, 3 people, 1 dietary restriction
+    description: "RE Beta Fund II -- 5 properties, NAV bridge + MOIC"
+    difficulty: medium
+    graded_items: 9
   - id: hard
-    description: 20-30 items, 14-day horizon, 4 people, 2 dietary restrictions
+    description: "Cross-fund portfolio -- 3 funds, co-investment, NAV bridge + MOIC + IRR"
+    difficulty: hard
+    graded_items: 10
+action_space: MCP tool calls (CallToolAction)
+observation_space: Tool responses as JSON (FundLensObservation)
+reward_range: [0.0, 1.0]
+entry_point: fundlens.server.app:app

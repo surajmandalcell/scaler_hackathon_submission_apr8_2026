@@ -43,3 +43,26 @@ results.json
 outputs/
 .claude/
 docs/*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.db
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
