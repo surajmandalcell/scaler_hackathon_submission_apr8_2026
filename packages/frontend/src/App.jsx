@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import NavRail from "./components/NavRail.jsx";
 import AnalystView from "./components/AnalystView.jsx";
 import AdminView from "./components/AdminView.jsx";
 import InvestorView from "./components/InvestorView.jsx";
@@ -6,8 +7,10 @@ import Playground from "./components/Playground.jsx";
 import DocsPage from "./components/DocsPage.jsx";
 import "./index.css";
 
-// Top-level "persona" switcher. Each view owns its own sub-nav; see the
-// individual *View components for sub-tab layouts.
+// Top-level personas surfaced in the navigation rail. Each owns its own
+// internal sub-tab nav, so the app shell only ever has ONE horizontal tab
+// row visible at a time -- this is the MD3 navigation-rail pattern, not the
+// previous double-stacked-tabs layout.
 const VIEWS = [
   { id: "analyst",    label: "Analyst" },
   { id: "admin",      label: "Admin" },
@@ -15,6 +18,14 @@ const VIEWS = [
   { id: "playground", label: "Playground" },
   { id: "docs",       label: "Docs" },
 ];
+
+const VIEW_HEADERS = {
+  analyst:    { eyebrow: "Persona", title: "Analyst",    sub: "Explore the scenario data the agent reasons over." },
+  admin:      { eyebrow: "Persona", title: "Admin",      sub: "Enter, upload, and reconcile fund data." },
+  investor:   { eyebrow: "Persona", title: "Investor",   sub: "Read-only LP portal in plain English." },
+  playground: { eyebrow: "Persona", title: "Playground", sub: "Drive the MCP tool surface like an agent does." },
+  docs:       { eyebrow: "Persona", title: "Docs",       sub: "Reference for tools, formulas, and grading." },
+};
 
 export default function App() {
   const [view, setView] = useState("analyst");
@@ -58,78 +69,61 @@ export default function App() {
     }
   }, []);
 
-  // Re-fetch the portfolio whenever the Admin tab mutates the store, so the
-  // Analyst/Investor views don't show stale data.
   const onStoreMutated = useCallback(() => {
     refreshPortfolio();
   }, [refreshPortfolio]);
 
+  const header = VIEW_HEADERS[view];
+
   return (
     <div className="app-shell">
-      <div className="md-container">
-        <header className="app-header">
-          <div className="app-brand">
-            <div className="app-brand-mark">
-              <span className="app-logo-dot" aria-hidden="true">F</span>
-              <h1 className="app-title">FundLens</h1>
+      <NavRail items={VIEWS} current={view} onChange={setView} />
+
+      <div className="app-body">
+        <div className="app-body-inner">
+          <header className="app-header">
+            <div className="app-brand">
+              <p className="md-eyebrow">{header.eyebrow}</p>
+              <h1 className="app-title">{header.title}</h1>
+              <p className="app-subtitle">{header.sub}</p>
             </div>
-            <p className="app-subtitle">
-              PE Fund NAV Bridge Environment · OpenEnv compliant
-            </p>
-          </div>
-        </header>
+          </header>
 
-        <div className="app-nav-row">
-          <nav className="md-tabs" role="tablist" aria-label="Views">
-            {VIEWS.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                role="tab"
-                aria-selected={view === v.id}
-                className={`md-tab ${view === v.id ? "is-active" : ""}`}
-                onClick={() => setView(v.id)}
-              >
-                {v.label}
-              </button>
-            ))}
-          </nav>
+          <main className="app-main md-axis-x" key={view}>
+            {view === "analyst" && (
+              <AnalystView
+                taskId={taskId}
+                setTaskId={setTaskId}
+                scenario={scenario}
+                loading={loading}
+                loadError={loadError}
+                onLoadScenario={loadScenario}
+              />
+            )}
+
+            {view === "admin" && (
+              <AdminView
+                taskId={taskId}
+                setTaskId={setTaskId}
+                scenario={scenario}
+                onStoreMutated={onStoreMutated}
+              />
+            )}
+
+            {view === "investor" && (
+              <InvestorView scenario={scenario} taskId={taskId} />
+            )}
+
+            {view === "playground" && <Playground />}
+
+            {view === "docs" && <DocsPage />}
+          </main>
+
+          <footer className="app-footer">
+            <span>FundLens v0.3 · {new Date().getFullYear()}</span>
+            <span>Scaler × Meta PyTorch Hackathon</span>
+          </footer>
         </div>
-
-        <main className="app-main md-fade-in" key={view}>
-          {view === "analyst" && (
-            <AnalystView
-              taskId={taskId}
-              setTaskId={setTaskId}
-              scenario={scenario}
-              loading={loading}
-              loadError={loadError}
-              onLoadScenario={loadScenario}
-            />
-          )}
-
-          {view === "admin" && (
-            <AdminView
-              taskId={taskId}
-              setTaskId={setTaskId}
-              scenario={scenario}
-              onStoreMutated={onStoreMutated}
-            />
-          )}
-
-          {view === "investor" && (
-            <InvestorView scenario={scenario} taskId={taskId} />
-          )}
-
-          {view === "playground" && <Playground />}
-
-          {view === "docs" && <DocsPage />}
-        </main>
-
-        <footer className="app-footer">
-          <span>FundLens v0.3 · {new Date().getFullYear()}</span>
-          <span>Scaler × Meta PyTorch Hackathon</span>
-        </footer>
       </div>
     </div>
   );

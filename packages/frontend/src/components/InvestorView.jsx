@@ -16,16 +16,6 @@ export default function InvestorView({ scenario, taskId }) {
 
   return (
     <div className="md-stack-lg">
-      <section className="md-stack-sm">
-        <span className="md-eyebrow">LP View</span>
-        <h2 className="md-section-title">Investor Portal</h2>
-        <p className="md-body-large md-on-surface-variant" style={{ maxWidth: 680 }}>
-          The same underlying data as the Analyst view, reframed for a
-          non-technical limited partner: plain-English metric labels, no
-          jargon, no tool surface. Reflects whatever scenario you've loaded.
-        </p>
-      </section>
-
       <nav className="md-tabs md-tabs-sub" role="tablist" aria-label="Investor sub-tabs">
         {INVESTOR_TABS.map((t) => (
           <button
@@ -41,7 +31,7 @@ export default function InvestorView({ scenario, taskId }) {
         ))}
       </nav>
 
-      <div className="md-fade-in" key={tab}>
+      <div className="md-axis-y" key={tab}>
         {tab === "portfolio"  && <Portfolio scenario={scenario} taskId={taskId} />}
         {tab === "navwalk"    && <NAVWalk scenario={scenario} />}
         {tab === "itd"        && <ITDSummary scenario={scenario} />}

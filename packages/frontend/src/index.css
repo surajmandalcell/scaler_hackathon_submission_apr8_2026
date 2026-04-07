@@ -328,9 +328,12 @@ p {
   }
 }
 
-.md-stack {
+.md-stack,
+.md-stack-sm,
+.md-stack-lg {
   display: flex;
   flex-direction: column;
+  /* Default gap; subclasses override below. */
   gap: var(--md-space-6);
 }
 
@@ -1007,13 +1010,31 @@ pre code {
 }
 
 /* ============================================================
-   App shell
+   App shell -- navigation rail layout
    ============================================================ */
 
 .app-shell {
   min-height: 100vh;
   display: flex;
+  flex-direction: row;
+  background: var(--md-background);
+}
+
+.app-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   flex-direction: column;
+}
+
+.app-body-inner {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--md-space-7);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .app-header {
@@ -1062,15 +1083,6 @@ pre code {
   font-weight: 400;
 }
 
-.app-nav-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-space-4);
-  padding-bottom: var(--md-space-7);
-  flex-wrap: wrap;
-}
-
 .app-main {
   flex: 1;
   padding-bottom: var(--md-space-12);
@@ -1089,18 +1101,204 @@ pre code {
   border-top: 1px solid var(--md-outline-variant);
 }
 
+/* ── Navigation rail (MD3 official pattern) ───────────────────── */
+
+.md-rail {
+  width: 96px;
+  flex-shrink: 0;
+  background: var(--md-surface-container-low);
+  border-right: 1px solid var(--md-outline-variant);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: var(--md-space-6);
+  padding-bottom: var(--md-space-6);
+  gap: var(--md-space-2);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 10;
+}
+
+.md-rail-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  margin-bottom: var(--md-space-4);
+}
+
+.md-rail-brand .app-logo-dot {
+  width: 44px;
+  height: 44px;
+  font-size: var(--md-title-large);
+  border-radius: var(--md-shape-lg);
+}
+
+.md-rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-1);
+  padding: 0 var(--md-space-2);
+  flex: 1;
+}
+
+.md-rail-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-space-1);
+  padding: var(--md-space-3) var(--md-space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--md-shape-lg);
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-sans);
+  font-size: var(--md-label-medium);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color var(--md-duration-short) var(--md-easing-emphasized),
+              background-color var(--md-duration-short) var(--md-easing-emphasized);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.md-rail-icon {
+  width: 56px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--md-shape-full);
+  position: relative;
+  z-index: 1;
+  transition: background-color var(--md-duration-medium) var(--md-easing-emphasized);
+}
+
+.md-rail-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 1.75;
+  transition: transform var(--md-duration-medium) var(--md-easing-emphasized);
+}
+
+.md-rail-item:hover .md-rail-icon {
+  background-color: rgba(103, 80, 164, var(--md-state-hover));
+}
+
+.md-rail-item:active .md-rail-icon {
+  background-color: rgba(103, 80, 164, var(--md-state-pressed));
+}
+
+.md-rail-item.is-active {
+  color: var(--md-on-surface);
+}
+
+.md-rail-item.is-active .md-rail-icon {
+  background-color: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.md-rail-item.is-active .md-rail-icon svg {
+  stroke-width: 2.25;
+  transform: scale(1.05);
+}
+
+.md-rail-label {
+  font-size: var(--md-label-medium);
+}
+
+.md-rail-spacer {
+  flex: 1;
+}
+
+/* Mobile fallback: hide rail, fall back to a top app bar with chips. */
+@media (max-width: 720px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .md-rail {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--md-space-3) var(--md-space-4);
+    border-right: none;
+    border-bottom: 1px solid var(--md-outline-variant);
+    overflow-x: auto;
+    gap: var(--md-space-2);
+  }
+  .md-rail-brand {
+    margin-bottom: 0;
+    margin-right: var(--md-space-3);
+    height: auto;
+  }
+  .md-rail-list {
+    flex-direction: row;
+    flex: 0 0 auto;
+    padding: 0;
+    gap: var(--md-space-1);
+  }
+  .md-rail-item {
+    flex-direction: row;
+    padding: var(--md-space-2) var(--md-space-3);
+  }
+  .md-rail-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .md-rail-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .md-rail-spacer {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .app-header {
     padding-top: var(--md-space-7);
     padding-bottom: var(--md-space-5);
   }
   .app-title { font-size: var(--md-headline-large); }
-  .app-nav-row { padding-bottom: var(--md-space-5); }
+  .app-body-inner { padding: 0 var(--md-space-5); }
 }
 
 /* ============================================================
-   Animations
+   Motion -- MD3 transition patterns
+   ----------------------------------------------------------------
+   Three patterns from the MD3 motion spec, plus a stagger helper:
+     md-axis-x  -- shared axis on X. Use for switching between
+                   sibling top-level views (Analyst <-> Admin).
+     md-axis-y  -- shared axis on Y. Use for navigating between
+                   hierarchically related screens (sub-tabs).
+     md-fade-through -- fade through. Use when content swaps with
+                        no spatial relationship (modal overlays).
+     md-fade-in -- minimal fade for one-off appearances.
+     md-stagger -- container that stages its direct children with
+                   a 60ms delay each, capped at 8 items so the
+                   tail of long lists isn't visibly delayed.
+   All animations honour the standard MD3 emphasized easing curve
+   and the prefers-reduced-motion media query.
    ============================================================ */
+
+@keyframes md-axis-x-in {
+  from { opacity: 0; transform: translate3d(30px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes md-axis-y-in {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes md-fade-through-in {
+  0%   { opacity: 0; transform: scale(0.92); }
+  35%  { opacity: 0; }
+  100% { opacity: 1; transform: scale(1); }
+}
 
 @keyframes md-fade-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -1112,12 +1310,62 @@ pre code {
   to   { opacity: 1; transform: scale(1); }
 }
 
+.md-axis-x {
+  animation: md-axis-x-in var(--md-duration-long) var(--md-easing-emphasized) both;
+}
+
+.md-axis-y {
+  animation: md-axis-y-in var(--md-duration-medium) var(--md-easing-emphasized) both;
+}
+
+.md-fade-through {
+  animation: md-fade-through-in var(--md-duration-long) var(--md-easing-emphasized) both;
+}
+
 .md-fade-in {
   animation: md-fade-in var(--md-duration-medium) var(--md-easing-standard) both;
 }
 
 .md-scale-in {
   animation: md-scale-in var(--md-duration-medium) var(--md-easing-standard) both;
+}
+
+/* Stagger container -- each direct child appears with a 60ms delay.
+   Limited to 8 children so a long list doesn't have a visibly slow tail. */
+.md-stagger > * {
+  animation: md-axis-y-in var(--md-duration-medium) var(--md-easing-emphasized) both;
+}
+.md-stagger > *:nth-child(1) { animation-delay: 0ms;   }
+.md-stagger > *:nth-child(2) { animation-delay: 50ms;  }
+.md-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.md-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.md-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.md-stagger > *:nth-child(6) { animation-delay: 240ms; }
+.md-stagger > *:nth-child(7) { animation-delay: 270ms; }
+.md-stagger > *:nth-child(n+8) { animation-delay: 300ms; }
+
+/* Container lift -- pairs with .md-card-interactive. The base card class
+   already has a transition; this rule strengthens the hover/active states
+   so the elevation change reads as a deliberate MD3 surface motion. */
+.md-card-interactive {
+  transition: transform var(--md-duration-medium) var(--md-easing-emphasized),
+              box-shadow var(--md-duration-medium) var(--md-easing-emphasized),
+              background-color var(--md-duration-short) var(--md-easing-standard);
+  will-change: transform;
+}
+.md-card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--md-elev-3);
+}
+.md-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--md-elev-1);
+  transition-duration: var(--md-duration-short);
+}
+
+/* Smooth navigation rail underline indicator that slides between items. */
+.md-rail-item {
+  transition: color var(--md-duration-medium) var(--md-easing-emphasized);
 }
 
 @media (prefers-reduced-motion: reduce) {

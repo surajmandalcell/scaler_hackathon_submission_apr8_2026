@@ -38,7 +38,7 @@ export default function AnalystView({
         ))}
       </nav>
 
-      <div className="md-fade-in" key={tab}>
+      <div className="md-axis-y" key={tab}>
         {tab === "dashboard" && (
           <Dashboard
             taskId={taskId}

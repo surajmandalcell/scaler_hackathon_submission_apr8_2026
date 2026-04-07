@@ -106,7 +106,7 @@ export default function Dashboard({
 
       {/* ── Funds grid ── */}
       {scenario && (
-        <section className="md-stack mt-4">
+        <section className="md-stack">
           <div className="md-stack-sm">
             <span className="md-eyebrow">Funds in play</span>
             <h3 className="md-headline-medium md-on-surface">
@@ -115,14 +115,14 @@ export default function Dashboard({
             </h3>
           </div>
 
-          <div className="md-grid md-grid-auto">
+          <div className="md-grid md-grid-auto md-stagger">
             {Object.entries(scenario.portfolio).map(([fid, fund]) => {
               const movement = fund.ending_nav - fund.beginning_nav;
               const positive = isPositive(movement);
               return (
                 <article
                   key={fid}
-                  className="md-card md-card-interactive md-fade-in"
+                  className="md-card md-card-interactive"
                   aria-label={fund.fund_name}
                 >
                   <div className="md-stack">

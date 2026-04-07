@@ -16,16 +16,6 @@ export default function AdminView({ taskId, setTaskId, scenario, onStoreMutated 
 
   return (
     <div className="md-stack-lg">
-      <section className="md-stack-sm">
-        <span className="md-eyebrow">Admin</span>
-        <h2 className="md-section-title">Fund Administration</h2>
-        <p className="md-body-large md-on-surface-variant" style={{ maxWidth: 680 }}>
-          Manual data entry, xlsx bulk upload, baseline agent test runs, and
-          the computed answer-key export. Everything here writes to the same
-          shared store that the Analyst and Investor views read from.
-        </p>
-      </section>
-
       <nav className="md-tabs md-tabs-sub" role="tablist" aria-label="Admin sub-tabs">
         {ADMIN_TABS.map((t) => (
           <button
@@ -41,7 +31,7 @@ export default function AdminView({ taskId, setTaskId, scenario, onStoreMutated 
         ))}
       </nav>
 
-      <div className="md-fade-in" key={tab}>
+      <div className="md-axis-y" key={tab}>
         {tab === "data"   && <DataEntry onStoreMutated={onStoreMutated} scenario={scenario} />}
         {tab === "upload" && <Upload onStoreMutated={onStoreMutated} />}
         {tab === "test"   && <TestRun taskId={taskId} setTaskId={setTaskId} />}
