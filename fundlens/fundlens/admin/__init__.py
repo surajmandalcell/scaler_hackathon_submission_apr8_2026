@@ -1,1 +1,0 @@
-# fundlens admin package

@@ -1,1 +1,0 @@
-# fundlens server package
