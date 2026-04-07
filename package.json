@@ -1,36 +1,32 @@
 {
-  "name": "openenv-scaler",
+  "name": "fundlens",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "install:backend": "cd packages/backend && uv sync",
+    "install:backend": "cd packages/backend && pip install -e '.[dev]'",
     "install:all": "npm install && npm run install:backend",
 
-    "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "npm run test:unit -w packages/backend",
-    "test:integration": "npm run test:integration -w packages/backend",
-    "test:e2e": "npm run test:e2e -w packages/backend",
+    "test": "npm run test:backend",
+    "test:backend": "cd packages/backend && python -m pytest tests/ -v",
     "test:frontend": "npm test -w packages/frontend",
-    "test:all": "npm run test && npm run test:frontend && npm run test:e2e",
+    "test:all": "npm run test:backend && npm run test:frontend",
 
-    "lint": "npm run lint -w packages/backend",
-    "lint:fix": "npm run lint:fix -w packages/backend",
-    "typecheck": "npm run typecheck -w packages/backend",
+    "lint": "cd packages/backend && ruff check .",
+    "lint:fix": "cd packages/backend && ruff check --fix . && ruff format .",
+    "typecheck": "cd packages/backend && mypy fundlens/",
 
-    "dev": "npm run dev -w packages/backend",
+    "dev": "cd packages/backend && uvicorn fundlens.server.app:app --host 0.0.0.0 --port 7860 --reload",
     "dev:frontend": "npm run dev -w packages/frontend",
 
     "build": "npm run build -w packages/frontend",
-    "docker:build": "docker build -t fridgeenv .",
-    "docker:run": "docker run --rm -p 7860:7860 fridgeenv",
+    "docker:build": "docker build -t fundlens .",
+    "docker:run": "docker run --rm -p 27860:7860 fundlens",
 
-    "validate": "openenv validate --url http://localhost:7860",
-    "inference": "cd packages/backend && uv run python ../../inference.py",
+    "inference": "cd packages/backend && python ../../inference.py",
 
-    "demo": "cd packages/backend && uv run python ../../scripts/demo.py",
     "preflight": "npm run lint && npm run typecheck && npm run test:all && npm run build"
   }
 }
