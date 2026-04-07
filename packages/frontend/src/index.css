@@ -848,3 +848,118 @@ pre code {
   padding: 0;
   color: inherit;
 }
+
+/* ============================================================
+   Dashboard / ScoreCard additions
+   ============================================================ */
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent-emerald);
+}
+
+.mode-description {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-top: var(--space-2);
+  font-weight: 500;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.movement {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.arrow {
+  font-size: 1.4rem;
+  color: var(--text-faint);
+}
+
+.metric-row {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.fund-name {
+  font-size: 1.4rem;
+  margin-top: var(--space-1);
+}
+
+.score-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-5) 0;
+  gap: var(--space-2);
+}
+
+.score-huge {
+  font-size: clamp(3rem, 8vw, 4.8rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.correct-answer {
+  margin-top: var(--space-3);
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.78rem;
+}
+
+.small {
+  font-size: 0.78rem;
+}
+
+.controls-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.tab-group {
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.accent-blue {
+  color: var(--accent-blue);
+}
+
+.warn {
+  color: var(--accent-warn);
+}
