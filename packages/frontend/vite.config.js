@@ -9,6 +9,9 @@ export default defineConfig({
       "/step": "http://localhost:7860",
       "/state": "http://localhost:7860",
       "/health": "http://localhost:7860",
+      "/api": "http://localhost:7860",
+      "/metadata": "http://localhost:7860",
+      "/schema": "http://localhost:7860",
     },
   },
   build: {
