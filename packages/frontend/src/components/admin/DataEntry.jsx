@@ -60,9 +60,16 @@ export default function DataEntry({ onStoreMutated, scenario }) {
     }
   }
 
+  // NOTE on `const form = e.currentTarget`: React reuses synthetic events
+  // and nulls out `currentTarget` once the handler returns. Awaiting a fetch
+  // before calling `form.reset()` would otherwise blow up with "Cannot read
+  // properties of null (reading 'reset')". Capture the DOM node up front and
+  // use it after the await.
+
   async function handleFundSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const body = {
       fund_name: fd.get("fund_name"),
       fund_currency: fd.get("fund_currency") || "USD",
@@ -72,12 +79,13 @@ export default function DataEntry({ onStoreMutated, scenario }) {
       nav_period_start: fd.get("nav_period_start") || "",
     };
     notify(setFundStatus, await postJson("/api/admin/fund", body));
-    e.currentTarget.reset();
+    form.reset();
   }
 
   async function handleDealSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const body = {
       property_name: fd.get("property_name"),
       sector: fd.get("sector") || "Other",
@@ -85,12 +93,13 @@ export default function DataEntry({ onStoreMutated, scenario }) {
       appraiser_nav: Number(fd.get("appraiser_nav") || 0),
     };
     notify(setDealStatus, await postJson("/api/admin/deal", body));
-    e.currentTarget.reset();
+    form.reset();
   }
 
   async function handleOwnershipSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const body = {
       fund_id: fd.get("fund_id"),
       deal_id: fd.get("deal_id"),
@@ -98,12 +107,13 @@ export default function DataEntry({ onStoreMutated, scenario }) {
       entry_date: fd.get("entry_date") || "",
     };
     notify(setOwnStatus, await postJson("/api/admin/ownership", body));
-    e.currentTarget.reset();
+    form.reset();
   }
 
   async function handleCashflowSubmit(e) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     const body = {
       fund_id: fd.get("fund_id"),
       deal_id: fd.get("deal_id"),
@@ -112,7 +122,7 @@ export default function DataEntry({ onStoreMutated, scenario }) {
       fund_amt: Number(fd.get("fund_amt") || 0),
     };
     notify(setCfStatus, await postJson("/api/admin/cashflow", body));
-    e.currentTarget.reset();
+    form.reset();
   }
 
   async function handleRecompute() {

@@ -26,7 +26,10 @@ function UploadCard({
   }
 
   async function handleUpload(e) {
-    const file = e.target.files?.[0];
+    // Capture the input element BEFORE any await -- React reuses synthetic
+    // events and `e.target` is null by the time the finally block runs.
+    const inputEl = e.target;
+    const file = inputEl.files?.[0];
     if (!file) return;
     setBusy(true);
     setStatus(null);
@@ -53,7 +56,7 @@ function UploadCard({
       setStatus({ ok: false, msg: err.message });
     } finally {
       setBusy(false);
-      e.target.value = ""; // allow re-uploading the same file
+      if (inputEl) inputEl.value = ""; // allow re-uploading the same file
     }
   }
 
