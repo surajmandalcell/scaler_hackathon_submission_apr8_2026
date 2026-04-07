@@ -34,8 +34,19 @@ LOADERS = {
 
 class FundLensEnvironment(MCPEnvironment):
 
-    def __init__(self) -> None:
-        self._store = DataStore()
+    def __init__(self, store: DataStore | None = None) -> None:
+        # When `store` is None (the default), create a private in-memory store
+        # so that OpenEnv's stateless `/reset`/`/step` handlers -- which build
+        # `FundLensEnvironment()` fresh per request and discard it afterwards
+        # (openenv-core http_server.py:582,617) -- continue to work without
+        # leaking data between requests.
+        #
+        # When an explicit `store` is injected (e.g. the SQLite-backed
+        # module-level singleton from data_store.py), the env shares that
+        # store with REST endpoints. This is how the long-lived `_demo_env`
+        # used by the Playground stays consistent with the Analyst/Admin/
+        # Investor views.
+        self._store = store if store is not None else DataStore()
         self._state = FundLensState()
         self._correct_answers: dict = {}
 

@@ -10,8 +10,9 @@ from openenv.core.env_server import CallToolAction, create_app
 
 from fundlens.models import FundLensObservation
 from fundlens.server.calculations import compute_metrics, compute_nav_bridge
-from fundlens.server.data_store import DataStore
+from fundlens.server.data_store import store
 from fundlens.server.environment import FundLensEnvironment
+from fundlens.server.runtime import demo_env, unwrap_tool_result
 from fundlens.server.seed_data import load_easy_task, load_hard_task, load_medium_task
 
 # OpenEnv HTTP API (reset / step / state endpoints)
@@ -22,30 +23,18 @@ app = create_app(
     env_name="fundlens",
 )
 
-# Shared data store for REST API queries (used by /api/* endpoints)
-_api_store = DataStore()
+# Mount additional routers (session playground, admin CRUD / uploads)
+from fundlens.admin.routes import router as admin_router  # noqa: E402
+from fundlens.server.session_routes import router as session_router  # noqa: E402
 
-# Shared in-process environment instance for the demo agent runner.
-# This is a workaround for the stateless HTTP /reset and /step endpoints in
-# openenv-core which create a new env instance per request, losing state.
-_demo_env = FundLensEnvironment()
+app.include_router(session_router)
+app.include_router(admin_router)
 
 _LOADERS = {
     "easy": load_easy_task,
     "medium": load_medium_task,
     "hard": load_hard_task,
 }
-
-
-def _unwrap_tool_result(observation: Any) -> Any:
-    """Pull the structured tool result out of an MCP observation envelope."""
-    if observation is None:
-        return None
-    result = getattr(observation, "result", None)
-    if result is None:
-        return None
-    data = getattr(result, "data", None) or getattr(result, "structured_content", None)
-    return data
 
 
 @app.get("/health")
@@ -56,10 +45,17 @@ async def health() -> dict:
 
 @app.post("/api/load-scenario")
 async def load_scenario(task_id: str = "easy") -> dict:
-    """Load seed data for a difficulty level into the shared API store."""
+    """Load seed data for a difficulty level into the shared store.
+
+    Also resets the long-lived `demo_env` so the Playground and
+    `/api/run-agent` observe the same scenario the Analyst view is looking at.
+    """
     loader = _LOADERS.get(task_id, load_easy_task)
-    loader(_api_store)
-    fund_ids = list(_api_store.funds.keys())
+    loader(store)
+    # Sync the playground env's task_id + correct answers without re-loading
+    # the store (which `loader` already did against the shared instance).
+    demo_env.reset(task_id=task_id)
+    fund_ids = list(store.funds.keys())
     return {
         "task_id": task_id,
         "funds_loaded": fund_ids,
@@ -71,8 +67,8 @@ async def load_scenario(task_id: str = "easy") -> dict:
 async def get_portfolio() -> dict:
     """Portfolio summary -- fund-level NAV, MOIC, IRR."""
     result = {}
-    for fid, fund in _api_store.funds.items():
-        metrics = compute_metrics(fid, _api_store)
+    for fid, fund in store.funds.items():
+        metrics = compute_metrics(fid, store)
         result[fid] = {
             "fund_name": fund.fund_name,
             "beginning_nav": round(fund.beginning_nav, 4),
@@ -86,7 +82,7 @@ async def get_portfolio() -> dict:
 @app.get("/api/bridge/{fund_id}")
 async def get_bridge(fund_id: str) -> dict:
     """8-line NAV bridge for a fund."""
-    bridge = compute_nav_bridge(fund_id, _api_store)
+    bridge = compute_nav_bridge(fund_id, store)
     if not bridge:
         return {"error": f"Fund '{fund_id}' not found"}
     return {k: round(v, 4) for k, v in bridge.items()}
@@ -95,12 +91,12 @@ async def get_bridge(fund_id: str) -> dict:
 @app.get("/api/deals/{fund_id}")
 async def get_deals(fund_id: str) -> dict:
     """Deals + ownership for a fund."""
-    if fund_id not in _api_store.funds:
+    if fund_id not in store.funds:
         return {"error": f"Fund '{fund_id}' not found"}
     deals = []
-    for deal in _api_store.get_deals_for_fund(fund_id):
-        own = _api_store.get_ownership(fund_id, deal.deal_id)
-        cfs = _api_store.get_cashflows(fund_id=fund_id, deal_id=deal.deal_id)
+    for deal in store.get_deals_for_fund(fund_id):
+        own = store.get_ownership(fund_id, deal.deal_id)
+        cfs = store.get_cashflows(fund_id=fund_id, deal_id=deal.deal_id)
         invested = sum(abs(c.fund_amt) for c in cfs if c.cf_type == "contribution")
         received = sum(c.fund_amt for c in cfs if c.cf_type in ("disposition", "income"))
         deals.append({
@@ -119,7 +115,7 @@ async def get_deals(fund_id: str) -> dict:
 @app.get("/api/cashflows/{fund_id}")
 async def get_cashflows(fund_id: str, deal_id: str | None = None) -> dict:
     """Cashflow summary for a fund or specific deal."""
-    cfs = _api_store.get_cashflows(fund_id=fund_id, deal_id=deal_id)
+    cfs = store.get_cashflows(fund_id=fund_id, deal_id=deal_id)
     total_contribution = sum(abs(c.fund_amt) for c in cfs if c.cf_type == "contribution")
     total_disposition = sum(c.fund_amt for c in cfs if c.cf_type == "disposition")
     total_income = sum(c.fund_amt for c in cfs if c.cf_type == "income")
@@ -141,12 +137,12 @@ async def get_cashflows(fund_id: str, deal_id: str | None = None) -> dict:
 async def get_sectors() -> dict:
     """Sector breakdown across all funds."""
     sector_data: dict = {}
-    for fid in _api_store.funds:
-        for deal in _api_store.get_deals_for_fund(fid):
+    for fid in store.funds:
+        for deal in store.get_deals_for_fund(fid):
             sec = deal.sector
             if sec not in sector_data:
                 sector_data[sec] = {"total_invested": 0.0, "total_received": 0.0, "deal_count": 0}
-            cfs = _api_store.get_cashflows(fund_id=fid, deal_id=deal.deal_id)
+            cfs = store.get_cashflows(fund_id=fid, deal_id=deal.deal_id)
             sector_data[sec]["total_invested"] += sum(
                 abs(c.fund_amt) for c in cfs if c.cf_type == "contribution"
             )
@@ -162,7 +158,7 @@ async def get_sectors() -> dict:
 
 @app.post("/api/run-agent")
 async def run_agent(task_id: str = "easy") -> dict:
-    """Run the baseline pass-through agent end-to-end on a shared env instance.
+    """Run the baseline pass-through agent end-to-end on `demo_env`.
 
     Returns the full step log + grading result so the frontend can replay it
     without having to deal with the stateless OpenEnv HTTP /reset+/step lifecycle.
@@ -173,7 +169,7 @@ async def run_agent(task_id: str = "easy") -> dict:
     steps: list[dict] = []
 
     # Step 1: reset
-    reset_obs = _demo_env.reset(task_id=task_id)
+    reset_obs = demo_env.reset(task_id=task_id)
     funds = list(reset_obs.available_funds)
     if not funds:
         return {"error": "No funds available after reset"}
@@ -195,8 +191,8 @@ async def run_agent(task_id: str = "easy") -> dict:
         tool_name="get_nav_bridge",
         arguments={"fund_id": primary_fund},
     )
-    bridge_obs = _demo_env.step(bridge_action)
-    bridge = _unwrap_tool_result(bridge_obs) or {}
+    bridge_obs = demo_env.step(bridge_action)
+    bridge = unwrap_tool_result(bridge_obs) or {}
     steps.append({
         "n": 2,
         "action": "get_nav_bridge",
@@ -214,8 +210,8 @@ async def run_agent(task_id: str = "easy") -> dict:
             tool_name="get_portfolio_summary",
             arguments={"funds": [primary_fund]},
         )
-        metrics_obs = _demo_env.step(metrics_action)
-        metrics_data = _unwrap_tool_result(metrics_obs) or {}
+        metrics_obs = demo_env.step(metrics_action)
+        metrics_data = unwrap_tool_result(metrics_obs) or {}
         fund_metrics = metrics_data.get(primary_fund, {}) if isinstance(metrics_data, dict) else {}
         metrics = {}
         if "moic" in fund_metrics:
@@ -236,8 +232,8 @@ async def run_agent(task_id: str = "easy") -> dict:
         submit_args["metrics"] = metrics
 
     submit_action = CallToolAction(tool_name="submit_report", arguments=submit_args)
-    submit_obs = _demo_env.step(submit_action)
-    grading = _unwrap_tool_result(submit_obs) or {}
+    submit_obs = demo_env.step(submit_action)
+    grading = unwrap_tool_result(submit_obs) or {}
 
     steps.append({
         "n": len(steps) + 1,

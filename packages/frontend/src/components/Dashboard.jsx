@@ -106,7 +106,7 @@ export default function Dashboard({
 
       {/* ── Funds grid ── */}
       {scenario && (
-        <section className="md-stack">
+        <section className="md-stack mt-4">
           <div className="md-stack-sm">
             <span className="md-eyebrow">Funds in play</span>
             <h3 className="md-headline-medium md-on-surface">

@@ -1130,3 +1130,86 @@ pre code {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   New surfaces -- Admin, Investor, Playground
+   Composed from existing MD3 tokens (no new colours, no new
+   typography). Only layout / structural classes live here.
+   ============================================================ */
+
+/* ── Secondary sub-tab row under the primary view switcher ──────── */
+.md-tabs-sub {
+  padding: var(--md-space-1) 0;
+  border-bottom: 1px solid var(--md-outline-variant);
+  margin-bottom: var(--md-space-5);
+  gap: var(--md-space-2);
+}
+
+.md-tab-sub {
+  font-size: var(--md-label-large);
+  padding: var(--md-space-2) var(--md-space-4);
+  height: 36px;
+  min-height: 36px;
+  border-radius: var(--md-shape-full);
+}
+
+.md-tab-sub.is-active::after {
+  /* Thinner indicator than the primary tabs so hierarchy is visible. */
+  height: 2px;
+  bottom: -1px;
+}
+
+/* ── Playground split-pane layout ───────────────────────────────── */
+.pg-shell {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) 1fr;
+  gap: var(--md-space-6);
+  align-items: start;
+}
+
+.pg-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-4);
+  position: sticky;
+  top: var(--md-space-4);
+  max-height: calc(100vh - var(--md-space-9));
+  overflow-y: auto;
+  padding-right: var(--md-space-2);
+}
+
+.pg-work {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .pg-shell {
+    grid-template-columns: 1fr;
+  }
+  .pg-tools {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* ── Admin xlsx upload drop zone ────────────────────────────────── */
+.admin-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--md-space-6) var(--md-space-5);
+  border: 2px dashed var(--md-outline-variant);
+  border-radius: var(--md-shape-lg);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+  text-align: center;
+  transition: border-color var(--md-duration-short) var(--md-easing-standard),
+              background var(--md-duration-short) var(--md-easing-standard);
+}
+
+.admin-upload:hover {
+  border-color: var(--md-primary);
+  background: var(--md-surface-container);
+}

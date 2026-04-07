@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ScoreCard from "./ScoreCard.jsx";
+import { summarizeArgs, summarizeResult } from "../utils/summarize.js";
 
 const DIFFICULTIES = [
   { id: "easy",   label: "Easy" },
@@ -13,33 +14,6 @@ const ACTION_LABELS = {
   get_portfolio_summary:"get_portfolio_summary",
   submit_report:        "submit_report",
 };
-
-function summarizeArgs(args) {
-  if (!args || typeof args !== "object") return "";
-  const entries = Object.entries(args);
-  if (entries.length === 0) return "";
-  return entries
-    .map(([k, v]) => {
-      if (Array.isArray(v)) return `${k}: [${v.join(", ")}]`;
-      if (typeof v === "object" && v !== null) return `${k}: …`;
-      return `${k}: ${v}`;
-    })
-    .join("  ·  ");
-}
-
-function summarizeResult(result) {
-  if (!result || typeof result !== "object") return "";
-  const keys = Object.keys(result);
-  if (keys.length === 0) return "{}";
-  const preview = keys.slice(0, 3).map((k) => {
-    const v = result[k];
-    if (typeof v === "number") return `${k}: ${v}`;
-    if (typeof v === "string") return `${k}: "${v.slice(0, 40)}"`;
-    if (Array.isArray(v)) return `${k}: [${v.length}]`;
-    return `${k}: …`;
-  }).join("  ·  ");
-  return keys.length > 3 ? `${preview}  · +${keys.length - 3}` : preview;
-}
 
 export default function AgentRunner({ taskId, setTaskId }) {
   const [running, setRunning] = useState(false);

@@ -1,25 +1,41 @@
 import { useCallback, useState } from "react";
-import Dashboard from "./components/Dashboard.jsx";
-import NAVBridge from "./components/NAVBridge.jsx";
-import FundExplorer from "./components/FundExplorer.jsx";
-import AgentRunner from "./components/AgentRunner.jsx";
+import AnalystView from "./components/AnalystView.jsx";
+import AdminView from "./components/AdminView.jsx";
+import InvestorView from "./components/InvestorView.jsx";
+import Playground from "./components/Playground.jsx";
 import DocsPage from "./components/DocsPage.jsx";
 import "./index.css";
 
-const PAGES = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "bridge", label: "NAV Bridge" },
-  { id: "explorer", label: "Explorer" },
-  { id: "agent", label: "Agent" },
-  { id: "docs", label: "Docs" },
+// Top-level "persona" switcher. Each view owns its own sub-nav; see the
+// individual *View components for sub-tab layouts.
+const VIEWS = [
+  { id: "analyst",    label: "Analyst" },
+  { id: "admin",      label: "Admin" },
+  { id: "investor",   label: "Investor" },
+  { id: "playground", label: "Playground" },
+  { id: "docs",       label: "Docs" },
 ];
 
 export default function App() {
-  const [page, setPage] = useState("dashboard");
+  const [view, setView] = useState("analyst");
   const [taskId, setTaskId] = useState("easy");
   const [scenario, setScenario] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
+
+  const refreshPortfolio = useCallback(async () => {
+    try {
+      const portfolioResp = await fetch("/api/portfolio");
+      if (!portfolioResp.ok) throw new Error(`portfolio ${portfolioResp.status}`);
+      const data = await portfolioResp.json();
+      setScenario((prev) => ({
+        taskId: prev?.taskId ?? taskId,
+        portfolio: data,
+      }));
+    } catch (err) {
+      console.error("Refresh portfolio failed:", err);
+    }
+  }, [taskId]);
 
   const loadScenario = useCallback(async (id) => {
     setLoading(true);
@@ -42,6 +58,12 @@ export default function App() {
     }
   }, []);
 
+  // Re-fetch the portfolio whenever the Admin tab mutates the store, so the
+  // Analyst/Investor views don't show stale data.
+  const onStoreMutated = useCallback(() => {
+    refreshPortfolio();
+  }, [refreshPortfolio]);
+
   return (
     <div className="app-shell">
       <div className="md-container">
@@ -58,25 +80,25 @@ export default function App() {
         </header>
 
         <div className="app-nav-row">
-          <nav className="md-tabs" role="tablist" aria-label="Pages">
-            {PAGES.map((p) => (
+          <nav className="md-tabs" role="tablist" aria-label="Views">
+            {VIEWS.map((v) => (
               <button
-                key={p.id}
+                key={v.id}
                 type="button"
                 role="tab"
-                aria-selected={page === p.id}
-                className={`md-tab ${page === p.id ? "is-active" : ""}`}
-                onClick={() => setPage(p.id)}
+                aria-selected={view === v.id}
+                className={`md-tab ${view === v.id ? "is-active" : ""}`}
+                onClick={() => setView(v.id)}
               >
-                {p.label}
+                {v.label}
               </button>
             ))}
           </nav>
         </div>
 
-        <main className="app-main md-fade-in" key={page}>
-          {page === "dashboard" && (
-            <Dashboard
+        <main className="app-main md-fade-in" key={view}>
+          {view === "analyst" && (
+            <AnalystView
               taskId={taskId}
               setTaskId={setTaskId}
               scenario={scenario}
@@ -86,19 +108,26 @@ export default function App() {
             />
           )}
 
-          {page === "bridge" && <NAVBridge scenario={scenario} />}
-
-          {page === "explorer" && <FundExplorer scenario={scenario} />}
-
-          {page === "agent" && (
-            <AgentRunner taskId={taskId} setTaskId={setTaskId} />
+          {view === "admin" && (
+            <AdminView
+              taskId={taskId}
+              setTaskId={setTaskId}
+              scenario={scenario}
+              onStoreMutated={onStoreMutated}
+            />
           )}
 
-          {page === "docs" && <DocsPage />}
+          {view === "investor" && (
+            <InvestorView scenario={scenario} taskId={taskId} />
+          )}
+
+          {view === "playground" && <Playground />}
+
+          {view === "docs" && <DocsPage />}
         </main>
 
         <footer className="app-footer">
-          <span>FundLens v0.2 · {new Date().getFullYear()}</span>
+          <span>FundLens v0.3 · {new Date().getFullYear()}</span>
           <span>Scaler × Meta PyTorch Hackathon</span>
         </footer>
       </div>

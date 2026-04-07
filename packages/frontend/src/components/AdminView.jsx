@@ -1,0 +1,52 @@
+import { useState } from "react";
+import DataEntry from "./admin/DataEntry.jsx";
+import Upload from "./admin/Upload.jsx";
+import TestRun from "./admin/TestRun.jsx";
+import AnswerKey from "./admin/AnswerKey.jsx";
+
+const ADMIN_TABS = [
+  { id: "data",   label: "Data Entry" },
+  { id: "upload", label: "Upload" },
+  { id: "test",   label: "Test Run" },
+  { id: "answer", label: "Answer Key" },
+];
+
+export default function AdminView({ taskId, setTaskId, scenario, onStoreMutated }) {
+  const [tab, setTab] = useState("data");
+
+  return (
+    <div className="md-stack-lg">
+      <section className="md-stack-sm">
+        <span className="md-eyebrow">Admin</span>
+        <h2 className="md-section-title">Fund Administration</h2>
+        <p className="md-body-large md-on-surface-variant" style={{ maxWidth: 680 }}>
+          Manual data entry, xlsx bulk upload, baseline agent test runs, and
+          the computed answer-key export. Everything here writes to the same
+          shared store that the Analyst and Investor views read from.
+        </p>
+      </section>
+
+      <nav className="md-tabs md-tabs-sub" role="tablist" aria-label="Admin sub-tabs">
+        {ADMIN_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`md-tab md-tab-sub ${tab === t.id ? "is-active" : ""}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="md-fade-in" key={tab}>
+        {tab === "data"   && <DataEntry onStoreMutated={onStoreMutated} scenario={scenario} />}
+        {tab === "upload" && <Upload onStoreMutated={onStoreMutated} />}
+        {tab === "test"   && <TestRun taskId={taskId} setTaskId={setTaskId} />}
+        {tab === "answer" && <AnswerKey taskId={taskId} setTaskId={setTaskId} />}
+      </div>
+    </div>
+  );
+}
