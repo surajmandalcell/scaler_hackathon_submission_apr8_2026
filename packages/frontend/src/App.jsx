@@ -1,6 +1,8 @@
 import { useState, useCallback } from "react";
 import Dashboard from "./components/Dashboard.jsx";
 import ScoreCard from "./components/ScoreCard.jsx";
+import NAVBridge from "./components/NAVBridge.jsx";
+import FundExplorer from "./components/FundExplorer.jsx";
 import "./index.css";
 
 const PAGES = [
@@ -70,19 +72,9 @@ export default function App() {
           </>
         )}
 
-        {page === "bridge" && (
-          <div className="stack">
-            <h2 className="serif section-title">NAV Bridge</h2>
-            <p className="muted">Coming soon - select a fund to view its 8-line NAV bridge.</p>
-          </div>
-        )}
+        {page === "bridge" && <NAVBridge scenario={scenario} />}
 
-        {page === "explorer" && (
-          <div className="stack">
-            <h2 className="serif section-title">Fund Explorer</h2>
-            <p className="muted">Coming soon - deals, cashflows, and sector breakdowns.</p>
-          </div>
-        )}
+        {page === "explorer" && <FundExplorer scenario={scenario} />}
 
         {page === "agent" && (
           <div className="stack">

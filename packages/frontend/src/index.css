@@ -963,3 +963,66 @@ pre code {
 .warn {
   color: var(--accent-warn);
 }
+
+/* ============================================================
+   Select input
+   ============================================================ */
+
+.select-input {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-width: 240px;
+  outline: none;
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+
+.select-input:hover {
+  border-color: var(--accent-emerald);
+}
+
+.select-input:focus {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* ============================================================
+   Bridge table
+   ============================================================ */
+
+.bridge-table tbody tr {
+  border-left: 4px solid transparent;
+  transition: background 0.15s var(--ease-out);
+}
+
+.bridge-row--emerald {
+  border-left-color: var(--accent-emerald) !important;
+}
+
+.bridge-row--blue {
+  border-left-color: var(--accent-blue) !important;
+}
+
+.bridge-row--red {
+  border-left-color: var(--accent-danger) !important;
+}
+
+.bridge-row--subtotal td {
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.bridge-label {
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+.amount-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
