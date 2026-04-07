@@ -1026,3 +1026,39 @@ pre code {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ============================================================
+   Agent Runner step log
+   ============================================================ */
+
+.step-log {
+  max-height: 600px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.step-card {
+  border-left: 2px solid var(--line-soft);
+  padding: var(--space-3) var(--space-4);
+}
+
+.step-header {
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.step-number {
+  background: var(--bg-surface-2);
+  color: var(--accent-emerald);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.step-action {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.85rem;
+}

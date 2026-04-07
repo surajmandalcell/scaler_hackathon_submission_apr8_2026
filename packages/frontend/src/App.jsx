@@ -3,6 +3,8 @@ import Dashboard from "./components/Dashboard.jsx";
 import ScoreCard from "./components/ScoreCard.jsx";
 import NAVBridge from "./components/NAVBridge.jsx";
 import FundExplorer from "./components/FundExplorer.jsx";
+import AgentRunner from "./components/AgentRunner.jsx";
+import DocsPage from "./components/DocsPage.jsx";
 import "./index.css";
 
 const PAGES = [
@@ -77,18 +79,10 @@ export default function App() {
         {page === "explorer" && <FundExplorer scenario={scenario} />}
 
         {page === "agent" && (
-          <div className="stack">
-            <h2 className="serif section-title">Agent Runner</h2>
-            <p className="muted">Coming soon - run the baseline LLM agent against the environment.</p>
-          </div>
+          <AgentRunner taskId={taskId} scenario={scenario} onResult={setResult} />
         )}
 
-        {page === "docs" && (
-          <div className="stack">
-            <h2 className="serif section-title">Documentation</h2>
-            <p className="muted">Coming soon - API reference, data models, grading tolerances.</p>
-          </div>
-        )}
+        {page === "docs" && <DocsPage />}
       </main>
 
       <footer className="app-footer container">
