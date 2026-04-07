@@ -1,6 +1,5 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import Dashboard from "./components/Dashboard.jsx";
-import ScoreCard from "./components/ScoreCard.jsx";
 import NAVBridge from "./components/NAVBridge.jsx";
 import FundExplorer from "./components/FundExplorer.jsx";
 import AgentRunner from "./components/AgentRunner.jsx";
@@ -20,19 +19,24 @@ export default function App() {
   const [taskId, setTaskId] = useState("easy");
   const [scenario, setScenario] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const loadScenario = useCallback(async (id) => {
     setLoading(true);
+    setLoadError(null);
     setScenario(null);
-    setResult(null);
     try {
-      await fetch(`/api/load-scenario?task_id=${id}`, { method: "POST" });
-      const resp = await fetch("/api/portfolio");
-      const data = await resp.json();
+      const loadResp = await fetch(`/api/load-scenario?task_id=${id}`, {
+        method: "POST",
+      });
+      if (!loadResp.ok) throw new Error(`load-scenario ${loadResp.status}`);
+      const portfolioResp = await fetch("/api/portfolio");
+      if (!portfolioResp.ok) throw new Error(`portfolio ${portfolioResp.status}`);
+      const data = await portfolioResp.json();
       setScenario({ taskId: id, portfolio: data });
     } catch (err) {
       console.error("Load scenario failed:", err);
+      setLoadError(err.message || "Failed to load scenario");
     } finally {
       setLoading(false);
     }
@@ -40,55 +44,64 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header container">
-        <div>
-          <h1 className="app-title serif">FundLens</h1>
-          <p className="app-subtitle mono">PE Fund NAV Bridge Environment</p>
+      <div className="md-container">
+        <header className="app-header">
+          <div className="app-brand">
+            <div className="app-brand-mark">
+              <span className="app-logo-dot" aria-hidden="true">F</span>
+              <h1 className="app-title">FundLens</h1>
+            </div>
+            <p className="app-subtitle">
+              PE Fund NAV Bridge Environment · OpenEnv compliant
+            </p>
+          </div>
+        </header>
+
+        <div className="app-nav-row">
+          <nav className="md-tabs" role="tablist" aria-label="Pages">
+            {PAGES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={page === p.id}
+                className={`md-tab ${page === p.id ? "is-active" : ""}`}
+                onClick={() => setPage(p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </nav>
         </div>
-      </header>
 
-      <nav className="app-nav container">
-        {PAGES.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`tab ${page === p.id ? "active" : ""}`}
-            onClick={() => setPage(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </nav>
-
-      <main className="app-main container fade-in">
-        {page === "dashboard" && (
-          <>
+        <main className="app-main md-fade-in" key={page}>
+          {page === "dashboard" && (
             <Dashboard
               taskId={taskId}
               setTaskId={setTaskId}
               scenario={scenario}
               loading={loading}
+              loadError={loadError}
               onLoadScenario={loadScenario}
             />
-            <ScoreCard result={result} />
-          </>
-        )}
+          )}
 
-        {page === "bridge" && <NAVBridge scenario={scenario} />}
+          {page === "bridge" && <NAVBridge scenario={scenario} />}
 
-        {page === "explorer" && <FundExplorer scenario={scenario} />}
+          {page === "explorer" && <FundExplorer scenario={scenario} />}
 
-        {page === "agent" && (
-          <AgentRunner taskId={taskId} scenario={scenario} onResult={setResult} />
-        )}
+          {page === "agent" && (
+            <AgentRunner taskId={taskId} setTaskId={setTaskId} />
+          )}
 
-        {page === "docs" && <DocsPage />}
-      </main>
+          {page === "docs" && <DocsPage />}
+        </main>
 
-      <footer className="app-footer container">
-        <span className="mono muted">FundLens v0.2</span>
-        <span className="mono muted">Scaler x Meta PyTorch Hackathon 2026</span>
-      </footer>
+        <footer className="app-footer">
+          <span>FundLens v0.2 · {new Date().getFullYear()}</span>
+          <span>Scaler × Meta PyTorch Hackathon</span>
+        </footer>
+      </div>
     </div>
   );
 }

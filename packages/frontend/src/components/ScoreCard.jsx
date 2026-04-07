@@ -1,61 +1,148 @@
-function rewardClass(reward) {
-  if (reward >= 0.9) return "positive";
-  if (reward >= 0.7) return "accent-blue";
-  if (reward >= 0.5) return "warn";
-  return "negative";
+function rewardTone(reward) {
+  if (reward >= 0.9) return { fg: "var(--md-on-primary-container)", bg: "var(--md-primary-container)", label: "Excellent" };
+  if (reward >= 0.7) return { fg: "var(--md-on-secondary-container)", bg: "var(--md-secondary-container)", label: "Strong" };
+  if (reward >= 0.5) return { fg: "var(--md-on-warning-container)", bg: "var(--md-warning-container)", label: "Partial" };
+  return { fg: "var(--md-on-error-container)", bg: "var(--md-error-container)", label: "Weak" };
 }
 
 export default function ScoreCard({ result }) {
   if (!result) return null;
 
   const reward = result.reward ?? 0;
+  const tone = rewardTone(reward);
   const bridgeReward = result.bridge_reward;
   const metricsReward = result.metrics_reward;
   const bridgeScore = result.bridge_score;
   const metricsScore = result.metrics_score;
 
   return (
-    <div className="card card-accent-emerald fade-in">
-      <div className="section-header">
-        <p className="eyebrow mono">Grading result</p>
-        <h3 className="serif">Agent Score</h3>
-      </div>
-      <div className="score-display">
-        <p className={`score-huge serif ${rewardClass(reward)}`}>{reward.toFixed(3)}</p>
-        <p className="metric-label">of 1.000 total reward</p>
-      </div>
-      <div className="divider"></div>
-      <div className="row">
-        {bridgeReward !== undefined && (
-          <div>
-            <p className="metric-label">Bridge Score</p>
-            <p className="metric-number">{bridgeReward.toFixed(3)}</p>
-            {bridgeScore !== undefined && (
-              <p className="muted small mono">{bridgeScore} items correct</p>
-            )}
-          </div>
-        )}
-        {metricsReward !== undefined && (
-          <div>
-            <p className="metric-label">Metrics Score</p>
-            <p className="metric-number">{metricsReward.toFixed(3)}</p>
-            {metricsScore !== undefined && (
-              <p className="muted small mono">{metricsScore} correct</p>
-            )}
-          </div>
-        )}
-      </div>
-      {result.correct_nav_bridge && (
-        <>
-          <div className="divider"></div>
+    <div
+      className="md-card md-fade-in"
+      style={{
+        background: tone.bg,
+        color: tone.fg,
+      }}
+    >
+      <div className="md-stack">
+        <div className="md-row-spread">
+          <span
+            className="md-label-large"
+            style={{ color: tone.fg, opacity: 0.85, letterSpacing: "0.06em", textTransform: "uppercase" }}
+          >
+            Grading result
+          </span>
+          <span
+            className="md-badge"
+            style={{ background: tone.fg, color: tone.bg, opacity: 0.95 }}
+          >
+            {tone.label}
+          </span>
+        </div>
+
+        <div className="md-stack-sm" style={{ alignItems: "center", textAlign: "center" }}>
+          <span
+            className="md-display-large"
+            style={{
+              color: tone.fg,
+              fontWeight: 400,
+              fontSize: "clamp(3rem, 9vw, 5.5rem)",
+              lineHeight: 1,
+            }}
+          >
+            {reward.toFixed(3)}
+          </span>
+          <span
+            className="md-label-large"
+            style={{ color: tone.fg, opacity: 0.7, letterSpacing: "0.04em" }}
+          >
+            of 1.000 total reward
+          </span>
+        </div>
+
+        <div
+          className="md-divider"
+          style={{ background: tone.fg, opacity: 0.2 }}
+        />
+
+        <div className="md-row" style={{ gap: "var(--md-space-7)" }}>
+          {bridgeReward !== undefined && (
+            <div className="md-metric">
+              <span
+                className="md-metric-label"
+                style={{ color: tone.fg, opacity: 0.75 }}
+              >
+                Bridge
+              </span>
+              <span
+                className="md-metric-value"
+                style={{ color: tone.fg }}
+              >
+                {bridgeReward.toFixed(3)}
+              </span>
+              {bridgeScore !== undefined && (
+                <span
+                  className="md-body-small md-mono"
+                  style={{ color: tone.fg, opacity: 0.7 }}
+                >
+                  {bridgeScore} items
+                </span>
+              )}
+            </div>
+          )}
+          {metricsReward !== undefined && (
+            <div className="md-metric">
+              <span
+                className="md-metric-label"
+                style={{ color: tone.fg, opacity: 0.75 }}
+              >
+                Metrics
+              </span>
+              <span
+                className="md-metric-value"
+                style={{ color: tone.fg }}
+              >
+                {metricsReward.toFixed(3)}
+              </span>
+              {metricsScore !== undefined && (
+                <span
+                  className="md-body-small md-mono"
+                  style={{ color: tone.fg, opacity: 0.7 }}
+                >
+                  {metricsScore}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {result.correct_nav_bridge && (
           <details>
-            <summary className="metric-label clickable">Show correct answer</summary>
-            <pre className="mono small correct-answer">
+            <summary
+              className="md-label-large"
+              style={{
+                color: tone.fg,
+                opacity: 0.85,
+                cursor: "pointer",
+                userSelect: "none",
+                marginTop: "var(--md-space-2)",
+              }}
+            >
+              Show correct answer
+            </summary>
+            <pre
+              style={{
+                marginTop: "var(--md-space-3)",
+                background: "rgba(255,255,255,0.5)",
+                color: "var(--md-on-surface)",
+                maxHeight: 320,
+                overflow: "auto",
+              }}
+            >
               {JSON.stringify(result.correct_nav_bridge, null, 2)}
             </pre>
           </details>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

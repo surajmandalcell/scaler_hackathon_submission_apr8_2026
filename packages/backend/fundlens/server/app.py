@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,14 +22,30 @@ app = create_app(
     env_name="fundlens",
 )
 
-# Shared data store for REST API queries
+# Shared data store for REST API queries (used by /api/* endpoints)
 _api_store = DataStore()
+
+# Shared in-process environment instance for the demo agent runner.
+# This is a workaround for the stateless HTTP /reset and /step endpoints in
+# openenv-core which create a new env instance per request, losing state.
+_demo_env = FundLensEnvironment()
 
 _LOADERS = {
     "easy": load_easy_task,
     "medium": load_medium_task,
     "hard": load_hard_task,
 }
+
+
+def _unwrap_tool_result(observation: Any) -> Any:
+    """Pull the structured tool result out of an MCP observation envelope."""
+    if observation is None:
+        return None
+    result = getattr(observation, "result", None)
+    if result is None:
+        return None
+    data = getattr(result, "data", None) or getattr(result, "structured_content", None)
+    return data
 
 
 @app.get("/health")
@@ -141,6 +158,103 @@ async def get_sectors() -> dict:
         v["total_invested"] = round(v["total_invested"], 4)
         v["total_received"] = round(v["total_received"], 4)
     return sector_data
+
+
+@app.post("/api/run-agent")
+async def run_agent(task_id: str = "easy") -> dict:
+    """Run the baseline pass-through agent end-to-end on a shared env instance.
+
+    Returns the full step log + grading result so the frontend can replay it
+    without having to deal with the stateless OpenEnv HTTP /reset+/step lifecycle.
+    """
+    if task_id not in _LOADERS:
+        return {"error": f"Unknown task_id '{task_id}'"}
+
+    steps: list[dict] = []
+
+    # Step 1: reset
+    reset_obs = _demo_env.reset(task_id=task_id)
+    funds = list(reset_obs.available_funds)
+    if not funds:
+        return {"error": "No funds available after reset"}
+    primary_fund = funds[0]
+
+    steps.append({
+        "n": 1,
+        "action": "reset",
+        "args": {"task_id": task_id},
+        "result": {
+            "available_funds": funds,
+            "task_description": reset_obs.task_description,
+            "difficulty": reset_obs.difficulty,
+        },
+    })
+
+    # Step 2: get_nav_bridge for primary fund
+    bridge_action = CallToolAction(
+        tool_name="get_nav_bridge",
+        arguments={"fund_id": primary_fund},
+    )
+    bridge_obs = _demo_env.step(bridge_action)
+    bridge = _unwrap_tool_result(bridge_obs) or {}
+    steps.append({
+        "n": 2,
+        "action": "get_nav_bridge",
+        "args": {"fund_id": primary_fund},
+        "result": bridge,
+    })
+
+    if "error" in bridge:
+        return {"error": bridge["error"], "steps": steps}
+
+    # Step 3 (medium/hard): get_portfolio_summary for metrics
+    metrics: dict[str, float] | None = None
+    if task_id in ("medium", "hard"):
+        metrics_action = CallToolAction(
+            tool_name="get_portfolio_summary",
+            arguments={"funds": [primary_fund]},
+        )
+        metrics_obs = _demo_env.step(metrics_action)
+        metrics_data = _unwrap_tool_result(metrics_obs) or {}
+        fund_metrics = metrics_data.get(primary_fund, {}) if isinstance(metrics_data, dict) else {}
+        metrics = {}
+        if "moic" in fund_metrics:
+            metrics["moic"] = fund_metrics["moic"]
+        if task_id == "hard" and "irr" in fund_metrics:
+            metrics["irr"] = fund_metrics["irr"]
+
+        steps.append({
+            "n": 3,
+            "action": "get_portfolio_summary",
+            "args": {"funds": [primary_fund]},
+            "result": fund_metrics,
+        })
+
+    # Final step: submit_report
+    submit_args: dict[str, Any] = {"nav_bridge": bridge}
+    if metrics:
+        submit_args["metrics"] = metrics
+
+    submit_action = CallToolAction(tool_name="submit_report", arguments=submit_args)
+    submit_obs = _demo_env.step(submit_action)
+    grading = _unwrap_tool_result(submit_obs) or {}
+
+    steps.append({
+        "n": len(steps) + 1,
+        "action": "submit_report",
+        "args": {
+            "bridge_items": len(bridge),
+            "metrics": list(metrics.keys()) if metrics else [],
+        },
+        "result": grading,
+    })
+
+    return {
+        "task_id": task_id,
+        "primary_fund": primary_fund,
+        "steps": steps,
+        "grading": grading,
+    }
 
 
 # Serve React frontend (must be LAST -- catches all unmatched routes)
