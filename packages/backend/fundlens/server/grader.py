@@ -6,7 +6,6 @@ Difficulty levels define WHAT is graded:
   hard   — NAV bridge (50%) + MOIC + IRR (50%)
 """
 from __future__ import annotations
-from typing import Dict, Optional
 
 # ── Tolerances ────────────────────────────────────────────────────────────
 TOL_AMOUNT   = 0.50   # ±$0.50M for NAV bridge line items
@@ -26,8 +25,8 @@ _BRIDGE_ITEMS = [
 ]
 
 # ── Metrics per level ─────────────────────────────────────────────────────
-_MEDIUM_METRICS: Dict[str, float] = {"moic": TOL_MULTIPLE}
-_HARD_METRICS:   Dict[str, float] = {"moic": TOL_MULTIPLE, "irr": TOL_IRR}
+_MEDIUM_METRICS: dict[str, float] = {"moic": TOL_MULTIPLE}
+_HARD_METRICS:   dict[str, float] = {"moic": TOL_MULTIPLE, "irr": TOL_IRR}
 
 # ── Weights per level ─────────────────────────────────────────────────────
 _TASK_WEIGHTS = {
@@ -38,12 +37,12 @@ _TASK_WEIGHTS = {
 
 
 def grade_nav_bridge(
-    submitted: Optional[Dict[str, float]],
-    correct: Dict[str, float],
-) -> Dict:
+    submitted: dict[str, float] | None,
+    correct: dict[str, float],
+) -> dict:
     if not submitted:
         return {"score": 0, "total": len(_BRIDGE_ITEMS), "reward": 0.0, "details": {}}
-    details: Dict[str, bool] = {}
+    details: dict[str, bool] = {}
     for key in _BRIDGE_ITEMS:
         sub = submitted.get(key)
         details[key] = sub is not None and abs(float(sub) - correct.get(key, 0.0)) <= TOL_AMOUNT
@@ -53,14 +52,14 @@ def grade_nav_bridge(
 
 
 def grade_metrics(
-    submitted: Optional[Dict[str, float]],
-    correct: Dict[str, float],
+    submitted: dict[str, float] | None,
+    correct: dict[str, float],
     task_id: str = "hard",
-) -> Dict:
+) -> dict:
     tolerances = _HARD_METRICS if task_id == "hard" else _MEDIUM_METRICS
     if not submitted:
         return {"score": 0, "total": len(tolerances), "reward": 0.0, "details": {}}
-    details: Dict[str, bool] = {}
+    details: dict[str, bool] = {}
     for key, tol in tolerances.items():
         sub = submitted.get(key)
         details[key] = sub is not None and abs(float(sub) - correct.get(key, 0.0)) <= tol
@@ -70,15 +69,15 @@ def grade_metrics(
 
 
 def grade_full_submission(
-    nav_bridge: Optional[Dict[str, float]],
-    metrics: Optional[Dict[str, float]],
-    correct_bridge: Dict[str, float],
-    correct_metrics: Dict[str, float],
+    nav_bridge: dict[str, float] | None,
+    metrics: dict[str, float] | None,
+    correct_bridge: dict[str, float],
+    correct_metrics: dict[str, float],
     task_id: str = "easy",
-) -> Dict:
+) -> dict:
     bridge_w, metrics_w = _TASK_WEIGHTS.get(task_id, (0.60, 0.40))
     bridge_r_obj = grade_nav_bridge(nav_bridge, correct_bridge)
-    bridge_r = bridge_r_obj["reward"]
+    bridge_r: float = bridge_r_obj["reward"]  # type: ignore[assignment]
 
     if task_id == "easy":
         overall = bridge_r
@@ -86,14 +85,16 @@ def grade_full_submission(
         metrics_score_str = "N/A (Level 1: bridge only)"
     else:
         metrics_r_obj = grade_metrics(metrics, correct_metrics, task_id)
-        overall = bridge_w * bridge_r + metrics_w * metrics_r_obj["reward"]
+        metrics_reward: float = metrics_r_obj["reward"]  # type: ignore[assignment]
+        overall = bridge_w * bridge_r + metrics_w * metrics_reward
         metrics_score_str = f"{metrics_r_obj['score']}/{metrics_r_obj['total']}"
 
+    m_reward: float = metrics_r_obj["reward"]  # type: ignore[assignment]
     return {
         "reward":          round(overall, 6),
         "task_id":         task_id,
         "bridge_reward":   round(bridge_r, 6),
-        "metrics_reward":  round(metrics_r_obj["reward"], 6),
+        "metrics_reward":  round(m_reward, 6),
         "bridge_details":  bridge_r_obj["details"],
         "metrics_details": metrics_r_obj["details"],
         "bridge_score":    f"{bridge_r_obj['score']}/{bridge_r_obj['total']}",

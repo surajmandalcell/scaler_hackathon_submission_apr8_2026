@@ -1,19 +1,28 @@
 """FundLens MCP Environment — tools + reset/step/state lifecycle."""
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+
+from typing import Any
+
 from fastmcp import FastMCP
-from openenv.core.env_server import MCPEnvironment, CallToolAction
+from openenv.core.env_server import MCPEnvironment
+
 from fundlens.models import FundLensObservation, FundLensState
-from fundlens.server.data_store import DataStore
 from fundlens.server.calculations import (
-    compute_nav_bridge, compute_metrics,
-    compute_portfolio_nav_bridge, compute_portfolio_metrics,
-    compute_deal_nav_bridge, compute_deal_metrics,
+    compute_deal_metrics,
+    compute_deal_nav_bridge,
+    compute_metrics,
+    compute_nav_bridge,
+    compute_portfolio_metrics,
+    compute_portfolio_nav_bridge,
 )
+from fundlens.server.data_store import DataStore
 from fundlens.server.grader import grade_full_submission
 from fundlens.server.seed_data import (
-    load_easy_task, load_medium_task, load_hard_task,
-    get_correct_answers, TASK_DESCRIPTIONS,
+    TASK_DESCRIPTIONS,
+    get_correct_answers,
+    load_easy_task,
+    load_hard_task,
+    load_medium_task,
 )
 
 LOADERS = {
@@ -28,13 +37,13 @@ class FundLensEnvironment(MCPEnvironment):
     def __init__(self) -> None:
         self._store = DataStore()
         self._state = FundLensState()
-        self._correct_answers: Dict = {}
+        self._correct_answers: dict = {}
 
         mcp = FastMCP("fundlens")
 
         # ── Tool 1: get_available_filters ──────────────────────────────────
         @mcp.tool()
-        def get_available_filters() -> Dict:
+        def get_available_filters() -> dict:
             """List valid fund_ids, deal_ids, sectors, and cashflow types."""
             return {
                 "fund_ids":  list(self._store.funds.keys()),
@@ -45,7 +54,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 2: get_portfolio_summary ──────────────────────────────────
         @mcp.tool()
-        def get_portfolio_summary(funds: Optional[List[str]] = None) -> Dict:
+        def get_portfolio_summary(funds: list[str] | None = None) -> dict:
             """Fund-level ending NAV, MOIC, and IRR for all or selected funds."""
             fund_ids = list(self._store.funds.keys()) if not funds else funds
             result = {}
@@ -64,7 +73,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 3: get_nav_bridge ─────────────────────────────────────────
         @mcp.tool()
-        def get_nav_bridge(fund_id: str) -> Dict:
+        def get_nav_bridge(fund_id: str) -> dict:
             """8-line NAV bridge for a fund (USD millions).
             Lines: beginning_nav, contribution, disposition, income,
                    cashflow_adjusted_nav, income_reversal, write_up_down, ending_nav."""
@@ -75,7 +84,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 4: get_irr ────────────────────────────────────────────────
         @mcp.tool()
-        def get_irr(fund_id: str) -> Dict:
+        def get_irr(fund_id: str) -> dict:
             """IRR (USD, all historical cashflows + terminal ending NAV)."""
             metrics = compute_metrics(fund_id, self._store)
             if not metrics:
@@ -85,9 +94,9 @@ class FundLensEnvironment(MCPEnvironment):
         # ── Tool 5: compare_funds ──────────────────────────────────────────
         @mcp.tool()
         def compare_funds(
-            funds: Optional[List[str]] = None,
-            metrics: Optional[List[str]] = None,
-        ) -> Dict:
+            funds: list[str] | None = None,
+            metrics: list[str] | None = None,
+        ) -> dict:
             """Side-by-side comparison. metrics options: moic | irr | ending_nav."""
             fund_ids = list(self._store.funds.keys()) if not funds else funds
             keys = metrics or ["moic", "irr", "ending_nav"]
@@ -97,7 +106,7 @@ class FundLensEnvironment(MCPEnvironment):
                     continue
                 m = compute_metrics(fid, self._store)
                 fund = self._store.funds[fid]
-                row: Dict[str, Any] = {"fund_name": fund.fund_name}
+                row: dict[str, Any] = {"fund_name": fund.fund_name}
                 for k in keys:
                     if k == "ending_nav":
                         row[k] = round(fund.ending_nav, 4)
@@ -109,12 +118,12 @@ class FundLensEnvironment(MCPEnvironment):
         # ── Tool 6: get_sector_report ──────────────────────────────────────
         @mcp.tool()
         def get_sector_report(
-            sector: Optional[str] = None,
-            funds: Optional[List[str]] = None,
-        ) -> Dict:
+            sector: str | None = None,
+            funds: list[str] | None = None,
+        ) -> dict:
             """Invested capital and distributions grouped by property sector."""
             fund_ids = list(self._store.funds.keys()) if not funds else funds
-            sector_data: Dict[str, Dict] = {}
+            sector_data: dict[str, dict] = {}
 
             for fid in fund_ids:
                 for deal in self._store.get_deals_for_fund(fid):
@@ -143,8 +152,7 @@ class FundLensEnvironment(MCPEnvironment):
                         "location":      deal.location,
                     })
 
-            for sec, data in sector_data.items():
-                inv = data["total_invested"]
+            for data in sector_data.values():
                 data["total_invested"] = round(data["total_invested"], 4)
                 data["total_received"] = round(data["total_received"], 4)
 
@@ -152,14 +160,14 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 7: get_deal_exposure ──────────────────────────────────────
         @mcp.tool()
-        def get_deal_exposure(deal_id: str) -> Dict:
+        def get_deal_exposure(deal_id: str) -> dict:
             """Deal shown across all funds that hold it, with per-fund ownership and cashflows."""
             if deal_id not in self._store.deals:
                 return {"error": f"Deal '{deal_id}' not found"}
 
             deal = self._store.deals[deal_id]
             fund_ids = self._store.get_funds_for_deal(deal_id)
-            per_fund: Dict[str, Any] = {}
+            per_fund: dict[str, Any] = {}
             total_ownership = 0.0
             total_invested = 0.0
             total_received = 0.0
@@ -196,10 +204,10 @@ class FundLensEnvironment(MCPEnvironment):
         @mcp.tool()
         def get_raw_cashflows(
             fund_id: str,
-            deal_id: Optional[str] = None,
+            deal_id: str | None = None,
             limit: int = 200,
             offset: int = 0,
-        ) -> Dict:
+        ) -> dict:
             """Individual cashflow records — paginated for large datasets.
             Use limit/offset to page through: offset=0 first, then offset+=limit.
             cf_type: contribution (negative = capital out),
@@ -237,8 +245,8 @@ class FundLensEnvironment(MCPEnvironment):
         @mcp.tool()
         def get_cashflow_summary(
             fund_id: str,
-            deal_id: Optional[str] = None,
-        ) -> Dict:
+            deal_id: str | None = None,
+        ) -> dict:
             """Pre-aggregated cashflow summary — scales to any dataset size.
             Returns totals by type + a dated IRR schedule (one net row per date).
             Use this for NAV bridge computation and MOIC/IRR — NOT raw rows.
@@ -254,7 +262,7 @@ class FundLensEnvironment(MCPEnvironment):
             total_contribution = 0.0
             total_disposition  = 0.0
             total_income       = 0.0
-            irr_by_date: Dict[str, float] = {}
+            irr_by_date: dict[str, float] = {}
 
             for c in cfs:
                 if c.cf_type == "contribution":
@@ -289,7 +297,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 9: get_deal_info ──────────────────────────────────────────
         @mcp.tool()
-        def get_deal_info(fund_id: str) -> Dict:
+        def get_deal_info(fund_id: str) -> dict:
             """Property-level data for all deals in a fund.
             Returns sector, location, ownership_pct, and current appraiser_nav
             (the authoritative ending value from the property appraiser).
@@ -308,12 +316,13 @@ class FundLensEnvironment(MCPEnvironment):
                     "appraiser_nav":  round(deal.appraiser_nav, 4),
                     "fund_share_nav": round(deal.appraiser_nav * (own.ownership_pct if own else 1.0), 4),
                 }
-            fund_ending_nav = sum(d["fund_share_nav"] for d in deals_out.values())
+            fund_ending_nav: float = sum(d["fund_share_nav"] for d in deals_out.values())  # type: ignore[misc]
             # Add deal-level beginning_nav (proportional allocation of fund beginning_nav)
             for d in deals_out.values():
                 if fund_ending_nav > 0:
+                    share: float = d["fund_share_nav"]  # type: ignore[assignment]
                     d["deal_beginning_nav"] = round(
-                        fund.beginning_nav * (d["fund_share_nav"] / fund_ending_nav), 4
+                        fund.beginning_nav * (share / fund_ending_nav), 4
                     )
                 else:
                     d["deal_beginning_nav"] = 0.0
@@ -329,7 +338,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 10: get_portfolio_bridge ─────────────────────────────────
         @mcp.tool()
-        def get_portfolio_bridge() -> Dict:
+        def get_portfolio_bridge() -> dict:
             """8-line NAV bridge aggregated across ALL funds (portfolio level, USD millions)."""
             bridge = compute_portfolio_nav_bridge(self._store)
             if not bridge:
@@ -338,7 +347,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 11: get_deal_bridge ───────────────────────────────────────
         @mcp.tool()
-        def get_deal_bridge(fund_id: str, deal_id: str) -> Dict:
+        def get_deal_bridge(fund_id: str, deal_id: str) -> dict:
             """8-line NAV bridge for a single deal within a fund.
             beginning_nav is proportionally estimated from fund beginning_nav."""
             bridge = compute_deal_nav_bridge(fund_id, deal_id, self._store)
@@ -348,7 +357,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 12: get_deal_metrics ──────────────────────────────────────
         @mcp.tool()
-        def get_deal_metrics(fund_id: str, deal_id: str) -> Dict:
+        def get_deal_metrics(fund_id: str, deal_id: str) -> dict:
             """MOIC and IRR for a single deal within a fund."""
             m = compute_deal_metrics(fund_id, deal_id, self._store)
             if not m:
@@ -357,7 +366,7 @@ class FundLensEnvironment(MCPEnvironment):
 
         # ── Tool 13: get_portfolio_metrics ─────────────────────────────────
         @mcp.tool()
-        def get_portfolio_metrics() -> Dict:
+        def get_portfolio_metrics() -> dict:
             """MOIC and IRR pooled across ALL funds (portfolio level)."""
             m = compute_portfolio_metrics(self._store)
             if not m:
@@ -367,9 +376,9 @@ class FundLensEnvironment(MCPEnvironment):
         # ── Tool 14: submit_report ─────────────────────────────────────────
         @mcp.tool()
         def submit_report(
-            nav_bridge: Dict[str, float],
-            metrics: Optional[Dict[str, float]] = None,
-        ) -> Dict:
+            nav_bridge: dict[str, float],
+            metrics: dict[str, float] | None = None,
+        ) -> dict:
             """Grade submission. Returns reward 0.0–1.0.
             easy:   nav_bridge only
             medium: nav_bridge + metrics={"moic": value}
@@ -408,8 +417,8 @@ class FundLensEnvironment(MCPEnvironment):
 
     def reset(
         self,
-        seed: Optional[int] = None,
-        episode_id: Optional[str] = None,
+        seed: int | None = None,
+        episode_id: str | None = None,
         task_id: str = "easy",
         **kwargs,
     ) -> FundLensObservation:

@@ -1,9 +1,10 @@
 """Pydantic data models for FundLens."""
 from __future__ import annotations
-from typing import Optional, Dict, List, Any
-from pydantic import BaseModel, Field
-from openenv.core.env_server import Observation, State, Action
 
+from typing import Any
+
+from openenv.core.env_server import Action, Observation, State
+from pydantic import BaseModel, Field
 
 # ── Domain models ──────────────────────────────────────────────────────────
 
@@ -50,11 +51,11 @@ class FundLensObservation(Observation):
     task_id: str = ""
     difficulty: str = ""
     task_description: str = ""
-    available_funds: List[str] = Field(default_factory=list)
+    available_funds: list[str] = Field(default_factory=list)
     reporting_period: str = ""
     portfolio_nav_usd: float = 0.0
-    tool_result: Optional[Any] = None
-    grading_result: Optional[Dict] = None
+    tool_result: Any | None = None
+    grading_result: dict | None = None
     message: str = ""
 
 

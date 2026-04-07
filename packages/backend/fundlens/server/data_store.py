@@ -1,10 +1,11 @@
 """In-memory data store for FundLens — with optional SQLite persistence."""
 from __future__ import annotations
+
 import os
 import sqlite3
 from contextlib import contextmanager
-from typing import Dict, List, Optional
-from fundlens.models import Fund, Deal, Ownership, Cashflow
+
+from fundlens.models import Cashflow, Deal, Fund, Ownership
 
 
 class DataStore:
@@ -14,12 +15,12 @@ class DataStore:
     Omit db_path (default) for a pure in-memory store (used by the environment).
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
-        self.funds: Dict[str, Fund] = {}
-        self.deals: Dict[str, Deal] = {}
-        self.ownerships: List[Ownership] = []
-        self.cashflows: List[Cashflow] = []
-        self.fx_rates: List = []
+    def __init__(self, db_path: str | None = None) -> None:
+        self.funds: dict[str, Fund] = {}
+        self.deals: dict[str, Deal] = {}
+        self.ownerships: list[Ownership] = []
+        self.cashflows: list[Cashflow] = []
+        self.fx_rates: list = []
 
         self._db_path = db_path
         if db_path:
@@ -190,10 +191,10 @@ class DataStore:
 
     def get_cashflows(
         self,
-        fund_id: Optional[str] = None,
-        deal_id: Optional[str] = None,
-        cf_types: Optional[List[str]] = None,
-    ) -> List[Cashflow]:
+        fund_id: str | None = None,
+        deal_id: str | None = None,
+        cf_types: list[str] | None = None,
+    ) -> list[Cashflow]:
         result = self.cashflows
         if fund_id:
             result = [c for c in result if c.fund_id == fund_id]
@@ -203,17 +204,17 @@ class DataStore:
             result = [c for c in result if c.cf_type in cf_types]
         return result
 
-    def get_ownership(self, fund_id: str, deal_id: str) -> Optional[Ownership]:
+    def get_ownership(self, fund_id: str, deal_id: str) -> Ownership | None:
         for o in self.ownerships:
             if o.fund_id == fund_id and o.deal_id == deal_id:
                 return o
         return None
 
-    def get_deals_for_fund(self, fund_id: str) -> List[Deal]:
+    def get_deals_for_fund(self, fund_id: str) -> list[Deal]:
         deal_ids = {o.deal_id for o in self.ownerships if o.fund_id == fund_id}
         return [self.deals[did] for did in deal_ids if did in self.deals]
 
-    def get_funds_for_deal(self, deal_id: str) -> List[str]:
+    def get_funds_for_deal(self, deal_id: str) -> list[str]:
         return [o.fund_id for o in self.ownerships if o.deal_id == deal_id]
 
 

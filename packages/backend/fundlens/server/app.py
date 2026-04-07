@@ -1,16 +1,17 @@
 """FastAPI application -- OpenEnv API + REST endpoints for React frontend."""
 from __future__ import annotations
-from typing import Optional
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from openenv.core.env_server import create_app, CallToolAction
-from fundlens.models import FundLensObservation
-from fundlens.server.environment import FundLensEnvironment
-from fundlens.server.data_store import DataStore
-from fundlens.server.calculations import compute_nav_bridge, compute_metrics
-from fundlens.server.seed_data import load_easy_task, load_medium_task, load_hard_task
+
 import os
+
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from openenv.core.env_server import CallToolAction, create_app
+
+from fundlens.models import FundLensObservation
+from fundlens.server.calculations import compute_metrics, compute_nav_bridge
+from fundlens.server.data_store import DataStore
+from fundlens.server.environment import FundLensEnvironment
+from fundlens.server.seed_data import load_easy_task, load_hard_task, load_medium_task
 
 # OpenEnv HTTP API (reset / step / state endpoints)
 app = create_app(
@@ -99,7 +100,7 @@ async def get_deals(fund_id: str) -> dict:
 
 
 @app.get("/api/cashflows/{fund_id}")
-async def get_cashflows(fund_id: str, deal_id: Optional[str] = None) -> dict:
+async def get_cashflows(fund_id: str, deal_id: str | None = None) -> dict:
     """Cashflow summary for a fund or specific deal."""
     cfs = _api_store.get_cashflows(fund_id=fund_id, deal_id=deal_id)
     total_contribution = sum(abs(c.fund_amt) for c in cfs if c.cf_type == "contribution")
@@ -108,7 +109,7 @@ async def get_cashflows(fund_id: str, deal_id: Optional[str] = None) -> dict:
     records = sorted(
         [{"date": c.cash_date, "deal_id": c.deal_id, "type": c.cf_type,
           "amount": round(c.fund_amt, 4)} for c in cfs],
-        key=lambda r: r["date"],
+        key=lambda r: str(r["date"]),
     )
     return {
         "fund_id": fund_id,

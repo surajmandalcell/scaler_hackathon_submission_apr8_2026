@@ -16,15 +16,14 @@ NAV Bridge (8 lines, fund-level USD):
   = Ending NAV        (appraiser value)
 """
 from __future__ import annotations
-from typing import List, Dict, Tuple
-from datetime import date as date_type
-from fundlens.models import Cashflow
-from fundlens.server.data_store import DataStore
 
+from datetime import date as date_type
+
+from fundlens.server.data_store import DataStore
 
 # ── NAV Bridge ────────────────────────────────────────────────────────────
 
-def compute_nav_bridge(fund_id: str, store: DataStore) -> Dict[str, float]:
+def compute_nav_bridge(fund_id: str, store: DataStore) -> dict[str, float]:
     """8-line NAV bridge for a fund (USD millions)."""
     fund = store.funds.get(fund_id)
     if not fund:
@@ -64,7 +63,7 @@ def compute_nav_bridge(fund_id: str, store: DataStore) -> Dict[str, float]:
 # ── XIRR ──────────────────────────────────────────────────────────────────
 
 def calculate_xirr(
-    cashflows: List[Tuple],   # [(date, amount), ...]
+    cashflows: list[tuple],   # [(date, amount), ...]
     guess: float = 0.1,
     tol: float = 1e-6,
     max_iter: int = 200,
@@ -109,7 +108,7 @@ def calculate_xirr(
 
 # ── Performance Metrics ───────────────────────────────────────────────────
 
-def compute_metrics(fund_id: str, store: DataStore) -> Dict[str, float]:
+def compute_metrics(fund_id: str, store: DataStore) -> dict[str, float]:
     """
     Compute MOIC and IRR for a fund (fund-level USD, all historical cashflows).
 
@@ -134,7 +133,7 @@ def compute_metrics(fund_id: str, store: DataStore) -> Dict[str, float]:
 
     # IRR: all cashflows + terminal ending NAV
     terminal_date = date_type.fromisoformat(fund.reporting_date)
-    irr_map: Dict[date_type, float] = {}
+    irr_map: dict[date_type, float] = {}
     for c in cfs:
         d = date_type.fromisoformat(c.cash_date)
         irr_map[d] = irr_map.get(d, 0.0) + c.fund_amt  # contributions negative, rest positive
@@ -149,9 +148,9 @@ def compute_metrics(fund_id: str, store: DataStore) -> Dict[str, float]:
 
 # ── Portfolio-level (aggregate across all funds) ──────────────────────────
 
-def compute_portfolio_nav_bridge(store: DataStore) -> Dict[str, float]:
+def compute_portfolio_nav_bridge(store: DataStore) -> dict[str, float]:
     """Sum individual fund NAV bridges across all funds in the store."""
-    combined: Dict[str, float] = {}
+    combined: dict[str, float] = {}
     for fid in store.funds:
         bridge = compute_nav_bridge(fid, store)
         for k, v in bridge.items():
@@ -159,13 +158,13 @@ def compute_portfolio_nav_bridge(store: DataStore) -> Dict[str, float]:
     return {k: round(v, 4) for k, v in combined.items()}
 
 
-def compute_portfolio_metrics(store: DataStore) -> Dict[str, float]:
+def compute_portfolio_metrics(store: DataStore) -> dict[str, float]:
     """Combined MOIC and IRR across all funds (pooled cashflows)."""
     total_invested    = 0.0
     total_disposition = 0.0
     total_income      = 0.0
     total_ending_nav  = 0.0
-    irr_map: Dict[date_type, float] = {}
+    irr_map: dict[date_type, float] = {}
 
     for fid, fund in store.funds.items():
         cfs = store.get_cashflows(fund_id=fid)
@@ -189,7 +188,7 @@ def compute_portfolio_metrics(store: DataStore) -> Dict[str, float]:
 
 # ── Deal / Investment level ───────────────────────────────────────────────
 
-def compute_deal_nav_bridge(fund_id: str, deal_id: str, store: DataStore) -> Dict[str, float]:
+def compute_deal_nav_bridge(fund_id: str, deal_id: str, store: DataStore) -> dict[str, float]:
     """8-line NAV bridge for a single deal within a fund.
     beginning_nav is estimated proportionally: fund.beginning_nav × (deal_fund_share / fund.ending_nav).
     All cashflow amounts are already the fund's share (after ownership_pct applied at ingestion)."""
@@ -234,7 +233,7 @@ def compute_deal_nav_bridge(fund_id: str, deal_id: str, store: DataStore) -> Dic
     }
 
 
-def compute_deal_metrics(fund_id: str, deal_id: str, store: DataStore) -> Dict[str, float]:
+def compute_deal_metrics(fund_id: str, deal_id: str, store: DataStore) -> dict[str, float]:
     """Investment-level metrics for one deal within a fund.
     Returns: total_invested, total_income, total_disposition,
              current_value (fund share), total_returned, moic, irr."""
@@ -259,7 +258,7 @@ def compute_deal_metrics(fund_id: str, deal_id: str, store: DataStore) -> Dict[s
     moic = (total_returned + current_val) / total_invested
 
     terminal = date_type.fromisoformat(fund.reporting_date)
-    irr_map: Dict[date_type, float] = {}
+    irr_map: dict[date_type, float] = {}
     for c in cfs:
         d = date_type.fromisoformat(c.cash_date)
         irr_map[d] = irr_map.get(d, 0.0) + c.fund_amt

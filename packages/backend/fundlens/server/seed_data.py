@@ -19,11 +19,12 @@ Income convention:
   2024 income is bridge-period cashflow; 2022-2023 income is ITD only.
 """
 from __future__ import annotations
-from typing import Dict, Any
-from fundlens.models import Fund, Deal, Ownership, Cashflow
-from fundlens.server.data_store import DataStore
-from fundlens.server.calculations import compute_nav_bridge, compute_metrics
 
+from typing import Any
+
+from fundlens.models import Cashflow, Deal, Fund, Ownership
+from fundlens.server.calculations import compute_metrics, compute_nav_bridge
+from fundlens.server.data_store import DataStore
 
 TASK_DESCRIPTIONS = {
     "easy": (
@@ -561,8 +562,8 @@ def _load_alpha_deals(store: DataStore) -> None:
 
 # ── Ground-truth answer generator ────────────────────────────────────────────
 
-def get_correct_answers(store: DataStore) -> Dict[str, Any]:
-    answers: Dict[str, Any] = {}
+def get_correct_answers(store: DataStore) -> dict[str, Any]:
+    answers: dict[str, Any] = {}
     for fund_id in store.funds:
         answers[f"nav_bridge_{fund_id}"] = compute_nav_bridge(fund_id, store)
         answers[f"metrics_{fund_id}"]    = compute_metrics(fund_id, store)
