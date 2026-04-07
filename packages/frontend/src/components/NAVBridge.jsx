@@ -111,7 +111,7 @@ export default function NAVBridge({ scenario }) {
 
   if (!scenario) {
     return (
-      <div className="md-stack-lg">
+      <div className="md-stack-lg md-reveal">
         <div className="md-stack-sm">
           <span className="md-eyebrow">02 — Valuation Walk</span>
           <h2 className="md-section-title">NAV Bridge</h2>
@@ -127,7 +127,7 @@ export default function NAVBridge({ scenario }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <div className="md-stack-sm">
         <span className="md-eyebrow">02 — Valuation Walk</span>
         <h2 className="md-section-title">NAV Bridge</h2>
@@ -169,7 +169,7 @@ export default function NAVBridge({ scenario }) {
       {bridge && !loading && (
         <div className="md-card md-fade-in" style={{ padding: 0, overflow: "hidden" }}>
           <div className="md-table-wrap" style={{ background: "transparent", borderRadius: 0 }}>
-            <table className="md-table">
+            <table className="md-table md-table-reveal">
               <thead>
                 <tr>
                   <th>Step</th>

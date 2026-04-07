@@ -118,7 +118,7 @@ function UploadCard({
 
 export default function Upload({ onStoreMutated }) {
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-stack-sm">
         <span className="md-eyebrow">Bulk import</span>
         <h3 className="md-headline-small">Excel templates</h3>

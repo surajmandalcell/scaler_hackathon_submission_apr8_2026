@@ -30,7 +30,7 @@ export default function CallHistory({ entries, onClear, onUseResult }) {
       </div>
 
       {entries.map((entry) => (
-        <article key={entry.n} className="md-card md-card-tonal-secondary">
+        <article key={entry.n} className="md-card md-card-tonal-secondary md-row-reveal">
           <div className="md-stack-sm">
             <div className="md-row-spread">
               <div className="md-row" style={{ gap: "var(--md-space-3)" }}>

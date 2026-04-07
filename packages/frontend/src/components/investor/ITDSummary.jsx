@@ -87,7 +87,7 @@ export default function ITDSummary({ scenario }) {
   ];
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-stack-sm">
         <span className="md-eyebrow">Inception to date</span>
         <h3 className="md-headline-small">Where the money went and came back</h3>
@@ -114,7 +114,7 @@ export default function ITDSummary({ scenario }) {
 
       {cashflows && (
         <div className="md-table-wrap">
-          <table className="md-table">
+          <table className="md-table md-table-reveal">
             <thead>
               <tr>
                 <th>Line</th>

@@ -138,7 +138,7 @@ export default function DataEntry({ onStoreMutated, scenario }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <div className="md-grid md-grid-auto" style={{ alignItems: "start" }}>
         {/* ── Fund ────────────────────────────────────────────────────── */}
         <Form title="Add fund" status={fundStatus} onSubmit={handleFundSubmit}>

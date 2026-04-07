@@ -19,7 +19,7 @@ export default function Portfolio({ scenario, taskId }) {
   const funds = Object.entries(portfolio);
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       {/* Mode banner */}
       <div className="md-card md-card-tonal-primary">
         <div className="md-row" style={{ alignItems: "center" }}>
@@ -82,7 +82,7 @@ export default function Portfolio({ scenario, taskId }) {
       </div>
 
       <div className="md-table-wrap">
-        <table className="md-table">
+        <table className="md-table md-table-reveal">
           <thead>
             <tr>
               <th>Fund</th>

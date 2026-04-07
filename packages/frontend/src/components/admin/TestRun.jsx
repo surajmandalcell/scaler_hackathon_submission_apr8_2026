@@ -96,7 +96,7 @@ export default function TestRun({ taskId, setTaskId }) {
   const comparison = buildComparison();
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-card">
         <div className="md-stack">
           <div className="md-stack-sm">
@@ -152,7 +152,7 @@ export default function TestRun({ taskId, setTaskId }) {
           </div>
 
           <div className="md-table-wrap">
-            <table className="md-table">
+            <table className="md-table md-table-reveal">
               <thead>
                 <tr>
                   <th>Line item</th>

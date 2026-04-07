@@ -14,7 +14,7 @@ export default function ToolList({ tools, selectedName, onSelect }) {
   }
 
   return (
-    <div className="md-stack">
+    <div className="md-stack md-reveal-fast">
       {tools.map((tool) => {
         const isActive = tool.name === selectedName;
         const argNames = Object.keys(tool.parameters?.properties || {});

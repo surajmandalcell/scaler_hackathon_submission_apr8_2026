@@ -63,7 +63,7 @@ export default function FundExplorer({ scenario }) {
 
   if (!scenario) {
     return (
-      <div className="md-stack-lg">
+      <div className="md-stack-lg md-reveal">
         <div className="md-stack-sm">
           <span className="md-eyebrow">03 — Underlying</span>
           <h2 className="md-section-title">Fund Explorer</h2>
@@ -80,7 +80,7 @@ export default function FundExplorer({ scenario }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <div className="md-stack-sm">
         <span className="md-eyebrow">03 — Underlying</span>
         <h2 className="md-section-title">Fund Explorer</h2>
@@ -185,7 +185,7 @@ export default function FundExplorer({ scenario }) {
 
           <div className="md-card md-fade-in" style={{ padding: 0, overflow: "hidden" }}>
             <div className="md-table-wrap" style={{ background: "transparent", borderRadius: 0 }}>
-              <table className="md-table">
+              <table className="md-table md-table-reveal">
                 <thead>
                   <tr>
                     <th>Property</th>

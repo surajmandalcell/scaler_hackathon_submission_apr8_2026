@@ -105,7 +105,7 @@ export default function NAVWalk({ scenario }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-stack-sm">
         <span className="md-eyebrow">Step-by-step</span>
         <h3 className="md-headline-small">How did the fund value change?</h3>
@@ -142,7 +142,7 @@ export default function NAVWalk({ scenario }) {
 
       {bridge && !error && (
         <div className="md-table-wrap">
-          <table className="md-table">
+          <table className="md-table md-table-reveal">
             <thead>
               <tr>
                 <th>Step</th>

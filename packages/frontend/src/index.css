@@ -1823,3 +1823,140 @@ pre code {
     animation-delay: 0ms !important;
   }
 }
+
+/* ============================================================
+   Page-level reveal animations
+   ----------------------------------------------------------------
+   The shared-axis transitions handle SWITCHING between views and
+   sub-tabs, but each view's *initial* contents previously snapped
+   in. These rules give every page a soft cascading reveal:
+
+     md-reveal       -- staggers a parent's direct children with
+                        a fade-up; cap at 12 children. Apply to a
+                        page's root container.
+     md-reveal-fast  -- same but tighter (30ms increments) for
+                        long pages where the default would drag.
+     md-table-reveal -- staggers tbody tr children of a table.
+     md-row-reveal   -- one-off helper for a single newly-inserted
+                        item (e.g. a step appended to a log).
+     md-loading-pulse-- gentle background pulse for skeletons.
+
+   The reveal keyframe uses translate3d so it composites on the
+   GPU, and `both` fill-mode so the start state is applied even
+   before the animation begins -- otherwise children would flash
+   visible for one frame before sliding in.
+   ============================================================ */
+
+@keyframes md-reveal-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes md-reveal-row {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes md-loading-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+.md-reveal > * {
+  animation: md-reveal-up 520ms var(--md-easing-emphasized) both;
+}
+.md-reveal > *:nth-child(1)  { animation-delay: 30ms;  }
+.md-reveal > *:nth-child(2)  { animation-delay: 90ms;  }
+.md-reveal > *:nth-child(3)  { animation-delay: 150ms; }
+.md-reveal > *:nth-child(4)  { animation-delay: 210ms; }
+.md-reveal > *:nth-child(5)  { animation-delay: 270ms; }
+.md-reveal > *:nth-child(6)  { animation-delay: 320ms; }
+.md-reveal > *:nth-child(7)  { animation-delay: 365ms; }
+.md-reveal > *:nth-child(8)  { animation-delay: 405ms; }
+.md-reveal > *:nth-child(9)  { animation-delay: 440ms; }
+.md-reveal > *:nth-child(10) { animation-delay: 470ms; }
+.md-reveal > *:nth-child(11) { animation-delay: 495ms; }
+.md-reveal > *:nth-child(n+12) { animation-delay: 515ms; }
+
+.md-reveal-fast > * {
+  animation: md-reveal-up 380ms var(--md-easing-emphasized) both;
+}
+.md-reveal-fast > *:nth-child(1)  { animation-delay: 0ms;   }
+.md-reveal-fast > *:nth-child(2)  { animation-delay: 35ms;  }
+.md-reveal-fast > *:nth-child(3)  { animation-delay: 70ms;  }
+.md-reveal-fast > *:nth-child(4)  { animation-delay: 105ms; }
+.md-reveal-fast > *:nth-child(5)  { animation-delay: 140ms; }
+.md-reveal-fast > *:nth-child(6)  { animation-delay: 170ms; }
+.md-reveal-fast > *:nth-child(7)  { animation-delay: 195ms; }
+.md-reveal-fast > *:nth-child(n+8){ animation-delay: 215ms; }
+
+/* Table row stagger -- the row delay is shorter than .md-reveal so
+   long tables don't take a noticeable beat to fill in. Capped at 16
+   rows because beyond that nobody perceives the cascade anyway. */
+.md-table-reveal tbody tr {
+  animation: md-reveal-row 360ms var(--md-easing-emphasized) both;
+}
+.md-table-reveal tbody tr:nth-child(1)  { animation-delay: 20ms;  }
+.md-table-reveal tbody tr:nth-child(2)  { animation-delay: 50ms;  }
+.md-table-reveal tbody tr:nth-child(3)  { animation-delay: 80ms;  }
+.md-table-reveal tbody tr:nth-child(4)  { animation-delay: 110ms; }
+.md-table-reveal tbody tr:nth-child(5)  { animation-delay: 140ms; }
+.md-table-reveal tbody tr:nth-child(6)  { animation-delay: 165ms; }
+.md-table-reveal tbody tr:nth-child(7)  { animation-delay: 190ms; }
+.md-table-reveal tbody tr:nth-child(8)  { animation-delay: 215ms; }
+.md-table-reveal tbody tr:nth-child(9)  { animation-delay: 235ms; }
+.md-table-reveal tbody tr:nth-child(10) { animation-delay: 255ms; }
+.md-table-reveal tbody tr:nth-child(11) { animation-delay: 270ms; }
+.md-table-reveal tbody tr:nth-child(12) { animation-delay: 285ms; }
+.md-table-reveal tbody tr:nth-child(13) { animation-delay: 295ms; }
+.md-table-reveal tbody tr:nth-child(14) { animation-delay: 305ms; }
+.md-table-reveal tbody tr:nth-child(15) { animation-delay: 315ms; }
+.md-table-reveal tbody tr:nth-child(n+16) { animation-delay: 320ms; }
+
+/* Single-element reveal -- for items appended to a list at runtime
+   (e.g. agent run steps, playground call history entries). */
+.md-row-reveal {
+  animation: md-reveal-row 380ms var(--md-easing-emphasized) both;
+}
+
+/* Subtle row hover for any md-table -- gives data tables a sense of
+   responsiveness without committing to a heavy interactive surface. */
+.md-table tbody tr {
+  transition: background-color var(--md-duration-short) var(--md-easing-standard);
+}
+.md-table tbody tr:hover {
+  background-color: var(--md-surface-container-high);
+}
+
+/* Loading skeleton pulse -- apply to any element that's holding
+   space for content that hasn't arrived yet. */
+.md-loading-pulse {
+  animation: md-loading-pulse 1.4s ease-in-out infinite both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-reveal > *,
+  .md-reveal-fast > *,
+  .md-table-reveal tbody tr,
+  .md-row-reveal {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+  .md-loading-pulse {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+

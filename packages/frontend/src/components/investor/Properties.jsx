@@ -52,7 +52,7 @@ export default function Properties({ scenario }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-stack-sm">
         <span className="md-eyebrow">Holdings</span>
         <h3 className="md-headline-small">Properties in this fund</h3>
@@ -83,7 +83,7 @@ export default function Properties({ scenario }) {
 
       {deals && deals.length > 0 && (
         <div className="md-table-wrap">
-          <table className="md-table">
+          <table className="md-table md-table-reveal">
             <thead>
               <tr>
                 <th>Property</th>

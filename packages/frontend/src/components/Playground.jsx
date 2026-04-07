@@ -149,7 +149,7 @@ export default function Playground() {
   const availableDeals = state?.deals_loaded || [];
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-stack-sm">
         <span className="md-eyebrow">Agent tooling</span>
         <h2 className="md-section-title">MCP Playground</h2>

@@ -44,7 +44,7 @@ export default function Dashboard({
   const showIrr  = taskId === "hard";
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       {/* ── Hero ── */}
       <section className="md-surface-hero">
         <div className="md-stack">

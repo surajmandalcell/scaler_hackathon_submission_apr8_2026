@@ -47,7 +47,7 @@ export default function AnswerKey({ taskId, setTaskId }) {
   const funds = answers ? Object.entries(answers) : [];
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       <section className="md-card">
         <div className="md-stack">
           <div className="md-stack-sm">
@@ -92,7 +92,7 @@ export default function AnswerKey({ taskId, setTaskId }) {
       )}
 
       {funds.length > 0 && (
-        <div className="md-stack-lg">
+        <div className="md-stack-lg md-reveal">
           {funds.map(([fid, fund]) => (
             <section key={fid} className="md-stack">
               <div className="md-stack-sm">
@@ -101,7 +101,7 @@ export default function AnswerKey({ taskId, setTaskId }) {
               </div>
 
               <div className="md-table-wrap">
-                <table className="md-table">
+                <table className="md-table md-table-reveal">
                   <thead>
                     <tr>
                       <th>Line</th>

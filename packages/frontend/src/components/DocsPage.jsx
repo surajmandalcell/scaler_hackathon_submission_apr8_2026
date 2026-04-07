@@ -70,7 +70,7 @@ const BRIDGE_LINES = [
 
 export default function DocsPage() {
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       {/* ── Hero ── */}
       <section className="md-surface-hero">
         <div className="md-stack">
@@ -92,7 +92,7 @@ export default function DocsPage() {
         </div>
         <div className="md-card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="md-table-wrap" style={{ background: "transparent", borderRadius: 0 }}>
-            <table className="md-table">
+            <table className="md-table md-table-reveal">
               <thead>
                 <tr>
                   <th>Method</th>
@@ -132,7 +132,7 @@ export default function DocsPage() {
         </div>
         <div className="md-card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="md-table-wrap" style={{ background: "transparent", borderRadius: 0 }}>
-            <table className="md-table">
+            <table className="md-table md-table-reveal">
               <thead>
                 <tr>
                   <th>Tool</th>
@@ -194,7 +194,7 @@ export default function DocsPage() {
         </div>
         <div className="md-card" style={{ padding: 0, overflow: "hidden" }}>
           <div className="md-table-wrap" style={{ background: "transparent", borderRadius: 0 }}>
-            <table className="md-table">
+            <table className="md-table md-table-reveal">
               <thead>
                 <tr>
                   <th>Metric</th>

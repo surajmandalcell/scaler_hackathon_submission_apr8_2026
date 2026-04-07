@@ -52,7 +52,7 @@ export default function AgentRunner({ taskId, setTaskId }) {
   }
 
   return (
-    <div className="md-stack-lg">
+    <div className="md-stack-lg md-reveal">
       {/* ── Hero ── */}
       <section className="md-stack-sm">
         <span className="md-eyebrow">04 — Evaluation</span>
@@ -134,7 +134,7 @@ export default function AgentRunner({ taskId, setTaskId }) {
 
           <ol className="md-stack" style={{ listStyle: "none", padding: 0 }}>
             {steps.map((step) => (
-              <li key={step.n} className="md-card md-card-tonal-secondary md-fade-in">
+              <li key={step.n} className="md-card md-card-tonal-secondary md-row-reveal">
                 <div className="md-stack-sm">
                   <div className="md-row-spread">
                     <div className="md-row" style={{ gap: "var(--md-space-3)" }}>

@@ -17,7 +17,7 @@ export default function ScoreCard({ result }) {
 
   return (
     <div
-      className="md-card md-fade-in"
+      className="md-card md-row-reveal"
       style={{
         background: tone.bg,
         color: tone.fg,
