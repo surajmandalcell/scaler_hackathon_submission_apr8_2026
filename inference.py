@@ -49,7 +49,11 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")  # required, no default
 
 # Optional: only used by FundLensClient.from_docker_image()
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME", "fundlens:latest")
+# Declared without a default per the Scaler OpenEnv hackathon checklist
+# (defaults are set only for API_BASE_URL and MODEL_NAME). A runtime
+# fallback is applied at the call site in main() so `python inference.py`
+# still works out-of-the-box locally when the env var is unset.
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
 
 BENCHMARK = "fundlens"
 TASKS: List[str] = ["easy", "medium", "hard"]
@@ -305,12 +309,19 @@ async def main() -> None:
 
     llm = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
+    # Runtime fallback so a local `python inference.py` still works when
+    # LOCAL_IMAGE_NAME is unset. The declaration at the top of the file
+    # deliberately has no default per the hackathon checklist; judges
+    # override this by setting `LOCAL_IMAGE_NAME=<their-tag>` when they
+    # run the script against a differently tagged image.
+    image_name = LOCAL_IMAGE_NAME or "fundlens:latest"
+
     env: FundLensClient | None = None
     try:
-        env = await FundLensClient.from_docker_image(LOCAL_IMAGE_NAME)
+        env = await FundLensClient.from_docker_image(image_name)
     except Exception as exc:
         print(
-            f"[ERROR] Could not start env from Docker image '{LOCAL_IMAGE_NAME}': {exc}",
+            f"[ERROR] Could not start env from Docker image '{image_name}': {exc}",
             file=sys.stderr,
             flush=True,
         )
