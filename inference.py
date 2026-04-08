@@ -1,11 +1,18 @@
 """
 FundLens — Baseline Inference Script
 ====================================
-Required environment variables:
+Environment variables:
     API_BASE_URL      LLM endpoint (default: https://router.huggingface.co/v1)
     MODEL_NAME        Model identifier (default: Qwen/Qwen2.5-72B-Instruct)
     HF_TOKEN          Hugging Face / API key (NO default — must be set)
-    LOCAL_IMAGE_NAME  Local Docker image for the env (default: fundlens:latest)
+    LOCAL_IMAGE_NAME  Optional local Docker image for the env. If set, the
+                      script does `docker run` against this tag (fast dev
+                      loop). If unset, the script pulls from the HF Space
+                      registry instead — this is the path the Scaler grader
+                      takes since it runs on a clean machine with no image.
+    HF_SPACE_REPO     HF Space repo id to pull from when LOCAL_IMAGE_NAME is
+                      unset (default: surajmandalcell/fundlens). Resolves to
+                      registry.hf.space/{repo_with_slash_replaced}:latest.
 
 This script follows the structured-stdout contract from the hackathon
 sample inference script:
@@ -48,12 +55,26 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")  # required, no default
 
-# Optional: only used by FundLensClient.from_docker_image()
-# Declared without a default per the Scaler OpenEnv hackathon checklist
-# (defaults are set only for API_BASE_URL and MODEL_NAME). A runtime
-# fallback is applied at the call site in main() so `python inference.py`
-# still works out-of-the-box locally when the env var is unset.
+# Two ways to point inference.py at a running FundLens env, picked at the
+# call site in main():
+#
+#   LOCAL_IMAGE_NAME -- if set, the script does `docker run` against a
+#                       locally pre-built image (e.g. `fundlens:latest`
+#                       from `docker build -t fundlens:latest .`). This
+#                       is the fast dev path.
+#
+#   HF_SPACE_REPO    -- otherwise, the script pulls the public container
+#                       that HF Spaces auto-builds for any repo with
+#                       `sdk: docker` set in the README frontmatter, via
+#                       `registry.hf.space/{repo}:latest`. This is the
+#                       path the Scaler grader takes, since it runs on a
+#                       clean machine with no pre-built image.
+#
+# Both are declared without an HF-checklist-restricted default (only
+# API_BASE_URL, MODEL_NAME, and HF_SPACE_REPO carry defaults; HF_TOKEN
+# and LOCAL_IMAGE_NAME never do).
 LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+HF_SPACE_REPO = os.getenv("HF_SPACE_REPO", "surajmandalcell/fundlens")
 
 BENCHMARK = "fundlens"
 TASKS: List[str] = ["easy", "medium", "hard"]
@@ -309,24 +330,49 @@ async def main() -> None:
 
     llm = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
-    # Runtime fallback so a local `python inference.py` still works when
-    # LOCAL_IMAGE_NAME is unset. The declaration at the top of the file
-    # deliberately has no default per the hackathon checklist; judges
-    # override this by setting `LOCAL_IMAGE_NAME=<their-tag>` when they
-    # run the script against a differently tagged image.
-    image_name = LOCAL_IMAGE_NAME or "fundlens:latest"
-
+    # Bootstrap the env. Two paths:
+    #
+    #   1. LOCAL_IMAGE_NAME set      -> docker run a locally-built image.
+    #                                   Used in `make demo` / dev loops where
+    #                                   the contributor already ran
+    #                                   `docker build -t fundlens:latest .`
+    #                                   and wants to skip the network pull.
+    #
+    #   2. LOCAL_IMAGE_NAME unset    -> pull from the HF Space registry.
+    #                                   This is the path the Scaler grader
+    #                                   takes: it runs `python inference.py`
+    #                                   on a clean host with no pre-built
+    #                                   image, so we MUST be able to fetch
+    #                                   the env over the network. HF Spaces
+    #                                   with `sdk: docker` are auto-published
+    #                                   to `registry.hf.space/{repo}:latest`
+    #                                   as a public, unauthenticated pull.
     env: FundLensClient | None = None
+    bootstrap_source = (
+        f"local image '{LOCAL_IMAGE_NAME}'"
+        if LOCAL_IMAGE_NAME
+        else f"HF Space '{HF_SPACE_REPO}'"
+    )
     try:
-        env = await FundLensClient.from_docker_image(image_name)
+        if LOCAL_IMAGE_NAME:
+            env = await FundLensClient.from_docker_image(LOCAL_IMAGE_NAME)
+        else:
+            env = await FundLensClient.from_env(HF_SPACE_REPO)
     except Exception as exc:
         print(
-            f"[ERROR] Could not start env from Docker image '{image_name}': {exc}",
+            f"[ERROR] Could not start FundLens env from {bootstrap_source}: {exc}",
             file=sys.stderr,
             flush=True,
         )
         print(
-            "[HINT] Build the image first: docker build -t fundlens:latest .",
+            "[HINT] Local dev:  docker build -t fundlens:latest . && "
+            "LOCAL_IMAGE_NAME=fundlens:latest python inference.py",
+            file=sys.stderr,
+            flush=True,
+        )
+        print(
+            f"[HINT] Grader path: leave LOCAL_IMAGE_NAME unset; the script "
+            f"will pull registry.hf.space/{HF_SPACE_REPO.replace('/', '-')}:latest",
             file=sys.stderr,
             flush=True,
         )
