@@ -42,7 +42,79 @@ htmlcov/
 results.json
 outputs/
 .claude/
-docs/*.pdf
+
+# ── Binary files (BANNED from version control) ───────────────────────────
+# HuggingFace Spaces' pre-receive hook rejects binary files over git and
+# requires Xet LFS storage instead (https://huggingface.co/docs/hub/xet).
+# Rather than maintain a Xet pipeline, this project keeps the repo text-
+# only and regenerates or downloads any binary artifacts on demand.
+# If you genuinely need a binary at runtime, fetch it in the Dockerfile
+# or at app start-up — do NOT commit it.
+
+# Documents
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.odt
+*.ods
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.xz
+*.rar
+*.7z
+
+# Images (frontend SPA currently uses zero raster assets — if that
+# changes, host them on a CDN or inline as data-URLs in CSS/SVG)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.tif
+*.tiff
+*.webp
+*.psd
+*.ai
+*.sketch
+*.fig
+
+# Media
+*.mp3
+*.mp4
+*.mov
+*.wav
+*.avi
+*.mkv
+*.webm
+*.flac
+*.ogg
+
+# Model / ML artifacts
+*.bin
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+
+# Escape hatch: specific assets the frontend legitimately needs can be
+# unignored explicitly with a leading `!` on their own line below.
+# (Keep this list short. Every exception is a potential HF push failure.)
+
+# ─────────────────────────────────────────────────────────────────────────
 
 # Python
 __pycache__/

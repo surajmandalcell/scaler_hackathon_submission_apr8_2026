@@ -40,3 +40,64 @@ fundlens.db
 # to HF Spaces would confuse `openenv validate` since it contains a second
 # openenv.yaml with different version metadata.
 /fundlens/
+
+# ── Binary files ──────────────────────────────────────────────────────────
+# Belt-and-suspenders: .gitignore already blocks these from ever being
+# committed, but this list also covers the `huggingface_hub` upload path
+# in case someone ever switches to the HF Python SDK instead of git push.
+# HF Spaces rejects unversioned binaries over git and requires Xet LFS
+# (https://huggingface.co/docs/hub/xet). We avoid the issue entirely by
+# keeping the repo text-only.
+
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.odt
+*.ods
+
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.xz
+*.rar
+*.7z
+
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.tif
+*.tiff
+*.webp
+*.psd
+*.ai
+*.sketch
+*.fig
+
+*.mp3
+*.mp4
+*.mov
+*.wav
+*.avi
+*.mkv
+*.webm
+*.flac
+*.ogg
+
+*.bin
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
