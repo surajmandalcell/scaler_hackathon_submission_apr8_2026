@@ -1,0 +1,35 @@
+# Files to exclude from the HuggingFace Space upload.
+# The .env file contains an HF token and must never be pushed.
+
+.git
+.venv
+.env
+.env.local
+.env.*
+
+# Python build artifacts
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# Node build artifacts
+node_modules
+packages/frontend/dist
+
+# IDE / OS
+.DS_Store
+.vscode
+.idea
+
+# Claude workspace noise (not part of the submission)
+.claude
+.mcp.json
+
+# Local Docker / dev state
+*.log
+fundlens.db
+*.egg-info

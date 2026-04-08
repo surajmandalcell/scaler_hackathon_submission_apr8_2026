@@ -28,7 +28,9 @@ RUN pip install --no-cache-dir \
     "fastapi" \
     "uvicorn" \
     "openai" \
-    "httpx"
+    "httpx" \
+    "openpyxl>=3.1" \
+    "python-multipart>=0.0.6"
 
 # Copy backend source code
 COPY packages/backend/ /app/packages/backend/
@@ -42,8 +44,11 @@ COPY --from=frontend-build /build/packages/frontend/dist /app/packages/frontend/
 # Copy root files
 COPY inference.py openenv.yaml README.md /app/
 
-EXPOSE 7860
+EXPOSE 8000
 
 WORKDIR /app/packages/backend
 
-CMD ["uvicorn", "fundlens.server.app:app", "--host", "0.0.0.0", "--port", "7860"]
+# OpenEnv convention: environments listen on port 8000 inside the container.
+# The LocalDockerProvider used by clients like FundLensClient.from_docker_image()
+# hardcodes the mapping as "host:8000" and expects /health to be reachable there.
+CMD ["uvicorn", "fundlens.server.app:app", "--host", "0.0.0.0", "--port", "8000"]

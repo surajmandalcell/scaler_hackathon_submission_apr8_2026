@@ -1,0 +1,40 @@
+# Root-level pyproject.toml — exists to satisfy `openenv validate`'s
+# multi-mode deployment check (which expects a flat server/app.py +
+# pyproject.toml at the repo root).
+#
+# The canonical deployment path for this env is Docker (README.md
+# frontmatter `sdk: docker`); the Dockerfile installs the real
+# fundlens package from packages/backend/pyproject.toml, which is
+# where the actual editable install and the test/lint/typecheck
+# configuration live. This root file is intentionally minimal.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fundlens-env"
+version = "0.2.0"
+description = "FundLens — PE Fund NAV Bridge OpenEnv environment (root shim)"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core>=0.2.3",
+    "fastmcp>=3.1.1",
+    "pydantic>=2.0",
+    "fastapi",
+    "uvicorn",
+    "openai",
+    "httpx",
+    "openpyxl>=3.1",
+    "python-multipart>=0.0.6",
+]
+
+[project.scripts]
+# Launches the FundLens FastAPI app via the root-level server/app.py
+# stub, which re-exports the real app from fundlens.server.app.
+server = "server.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["server*"]
+exclude = ["packages*", "docs*", "tests*", "fundlens*", "node_modules*"]
