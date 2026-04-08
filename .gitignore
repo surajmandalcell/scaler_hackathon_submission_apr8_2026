@@ -66,4 +66,8 @@ venv/
 # OS
 .DS_Store
 
-fundlens
+# Legacy prior-iteration folder at the repo root (kept locally for
+# reference, never shipped). Anchored to / so it only matches the
+# top-level folder — NOT packages/backend/fundlens/ which contains
+# the actual tracked source code.
+/fundlens/
