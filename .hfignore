@@ -33,3 +33,10 @@ packages/frontend/dist
 *.log
 fundlens.db
 *.egg-info
+
+# Legacy prior-iteration folder at the repo root (has its own Dockerfile,
+# inference.py, openenv.yaml, sample .xlsx files). Not used by the runtime
+# image -- the canonical backend lives in packages/backend/. Shipping this
+# to HF Spaces would confuse `openenv validate` since it contains a second
+# openenv.yaml with different version metadata.
+/fundlens/

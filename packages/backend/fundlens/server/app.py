@@ -15,9 +15,29 @@ from fundlens.server.environment import FundLensEnvironment
 from fundlens.server.runtime import demo_env, unwrap_tool_result
 from fundlens.server.seed_data import load_easy_task, load_hard_task, load_medium_task
 
+
+def _stateful_env_factory() -> FundLensEnvironment:
+    """Factory for OpenEnv's REST /reset + /step handlers.
+
+    OpenEnv core (env_server/http_server.py:582,617) builds a fresh env
+    per request via this factory and calls `close()` on it afterwards,
+    which destroys per-instance state. That breaks our flow because
+    /reset populates a store that /step needs to read.
+
+    Fix: every factory call returns a lightweight wrapper that shares
+    the process-wide `store` singleton. Per-instance state (MCP client,
+    `_state`, `_correct_answers`) is still created fresh and can be
+    closed safely, but the underlying fund/deal/cashflow data -- and
+    the session task_id stashed at module scope in environment.py --
+    persists across requests so an agent can drive the env via the
+    standard `POST /reset` → `POST /step` contract.
+    """
+    return FundLensEnvironment(store=store)
+
+
 # OpenEnv HTTP API (reset / step / state endpoints)
 app = create_app(
-    env=FundLensEnvironment,
+    env=_stateful_env_factory,
     action_cls=CallToolAction,
     observation_cls=FundLensObservation,
     env_name="fundlens",

@@ -31,6 +31,22 @@ LOADERS = {
     "hard":   load_hard_task,
 }
 
+# ── Cross-request state (HTTP /reset + /step) ────────────────────────────
+#
+# OpenEnv's REST server at env_server/http_server.py:582,617 instantiates
+# a fresh FundLensEnvironment per request and calls close() afterwards.
+# Any state we set on `self` during reset() is therefore invisible to the
+# next /step call. We persist the two pieces of per-episode state that
+# submit_report needs at module scope so they survive across requests:
+#
+#   - `_SESSION_TASK_ID`: which difficulty level reset() was called with,
+#     needed by the grader to pick tolerance weights.
+#
+# Correct answers are NOT cached here -- they are pure-recomputed from the
+# store inside submit_report (the store itself is shared via the factory
+# in app.py), so they always match whatever scenario is currently loaded.
+_SESSION_TASK_ID: str = ""
+
 
 class FundLensEnvironment(MCPEnvironment):
 
@@ -395,11 +411,18 @@ class FundLensEnvironment(MCPEnvironment):
             medium: nav_bridge + metrics={"moic": value}
             hard:   nav_bridge + metrics={"moic": value, "irr": value}
             """
+            # Recompute correct answers from the *current* store state so
+            # stateless /reset + /step flows (where this env instance was
+            # created fresh for just this step) still see the right data.
+            correct_answers = self._correct_answers or get_correct_answers(self._store)
             fund_ids = list(self._store.funds.keys())
             primary = fund_ids[0] if fund_ids else "alpha"
-            correct_bridge  = self._correct_answers.get(f"nav_bridge_{primary}", {})
-            correct_metrics = self._correct_answers.get(f"metrics_{primary}", {})
-            task_id = self._state.task_id
+            correct_bridge  = correct_answers.get(f"nav_bridge_{primary}", {})
+            correct_metrics = correct_answers.get(f"metrics_{primary}", {})
+            # task_id: prefer instance state (tests & playground), fall back
+            # to the module-level session id set by the most recent reset()
+            # when this instance was built by the REST factory.
+            task_id = self._state.task_id or _SESSION_TASK_ID
 
             grading = grade_full_submission(
                 nav_bridge=nav_bridge,
@@ -437,6 +460,13 @@ class FundLensEnvironment(MCPEnvironment):
         loader(self._store)
         self._correct_answers = get_correct_answers(self._store)
         self._state = FundLensState(task_id=task_id, is_done=False)
+        # Publish the task_id at module scope so the very next /step
+        # request -- which arrives on a brand-new env instance built by
+        # the REST factory -- can still tell the grader which weights to
+        # use. Harmless no-op for tests / playground (they see the
+        # instance-level `_state.task_id` first).
+        global _SESSION_TASK_ID
+        _SESSION_TASK_ID = task_id
 
         total_nav = sum(f.ending_nav for f in self._store.funds.values())
 
