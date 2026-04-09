@@ -1,26 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────────
+# .dockerignore — controls what enters the Docker build context.
+#
+# RULE: Anchor directory patterns with a leading "/" when you only want to
+#       exclude a specific top-level folder. Without "/", Docker matches at
+#       ANY depth — e.g. bare "fundlens" silently excludes
+#       packages/backend/fundlens/ and breaks the build.
+# ─────────────────────────────────────────────────────────────────────────
+
+# ── Version control ──────────────────────────────────────────────────────
 .git
-.venv
-.env
-.env.local
+.gitattributes
+.gitignore
+.hfignore
+
+# ── Python caches (safe to match at any depth) ──────────────────────────
 __pycache__
 *.pyc
 *.pyo
 *.egg-info
+
+# ── Linter / type-checker caches ────────────────────────────────────────
 .mypy_cache
 .ruff_cache
 .pytest_cache
-node_modules
-packages/frontend/node_modules
-packages/frontend/dist
+
+# ── Virtual environments ────────────────────────────────────────────────
+.venv
 packages/backend/.venv
-packages/backend/__pycache__
+
+# ── Node (safe to match at any depth — never want node_modules in image)
+node_modules
+
+# ── Frontend dist (Stage 1 builds its own; context copy not needed) ─────
+packages/frontend/dist
+
+# ── Lock files not needed in image ──────────────────────────────────────
 packages/backend/uv.lock
-fundlens
-docs
-.claude
-results.json
-htmlcov
+
+# ── Environment / secrets (NEVER bake into image) ───────────────────────
+.env
+.env.local
+.env.*
+
+# ── Top-level directories excluded from image (ANCHORED to root) ────────
+# Legacy prior-iteration folder — kept locally for reference, never shipped.
+/fundlens
+# Documentation site — not part of the runtime image.
+/docs
+# Claude Code config — development-only.
+/.claude
+
+# ── Test / coverage artifacts ───────────────────────────────────────────
+/htmlcov
 .coverage
+/results.json
+
+# ── OS junk ─────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+
+# ── Binary files (match by extension — safe at any depth) ───────────────
 *.db
 *.xlsx
+*.xls
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.zip
+*.tar.gz
+*.rar
