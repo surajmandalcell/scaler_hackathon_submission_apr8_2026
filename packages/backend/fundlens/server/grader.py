@@ -1,4 +1,4 @@
-"""Grader for FundLens submissions. Returns reward in [0.0, 1.0].
+"""Grader for FundLens submissions. Returns reward in (0, 1) exclusive.
 
 Difficulty levels define WHAT is graded:
   easy   — NAV bridge only (8 items, 100%)
@@ -11,6 +11,9 @@ from __future__ import annotations
 TOL_AMOUNT   = 0.50   # ±$0.50M for NAV bridge line items
 TOL_MULTIPLE = 0.02   # ±0.02x for MOIC
 TOL_IRR      = 0.01   # ±1% absolute for IRR
+
+# Evaluator requires task scores strictly in (0, 1) — never exactly 0.0 or 1.0.
+REWARD_EPS = 0.01
 
 # ── NAV Bridge (8 items) ──────────────────────────────────────────────────
 _BRIDGE_ITEMS = [
@@ -88,6 +91,8 @@ def grade_full_submission(
         metrics_reward: float = metrics_r_obj["reward"]  # type: ignore[assignment]
         overall = bridge_w * bridge_r + metrics_w * metrics_reward
         metrics_score_str = f"{metrics_r_obj['score']}/{metrics_r_obj['total']}"
+
+    overall = max(REWARD_EPS, min(1.0 - REWARD_EPS, overall))
 
     m_reward: float = metrics_r_obj["reward"]  # type: ignore[assignment]
     return {

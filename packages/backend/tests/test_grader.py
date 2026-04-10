@@ -113,7 +113,7 @@ def test_grade_full_submission_perfect():
         correct_metrics=CORRECT_METRICS,
         task_id="hard",
     )
-    assert result["reward"] == pytest.approx(1.0)
+    assert result["reward"] == pytest.approx(0.99)
     assert result["bridge_reward"] == pytest.approx(1.0)
     assert result["metrics_reward"] == pytest.approx(1.0)
 
@@ -167,7 +167,7 @@ def test_grade_full_submission_both_none():
         correct_metrics=CORRECT_METRICS,
         task_id="hard",
     )
-    assert result["reward"] == pytest.approx(0.0)
+    assert result["reward"] == pytest.approx(0.01)
 
 
 def test_grader_never_returns_constant():

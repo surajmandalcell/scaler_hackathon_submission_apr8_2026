@@ -306,7 +306,7 @@ async def run_episode(env: FundLensClient, llm: OpenAI, task_id: str) -> float:
         )
 
         score = max(rewards)
-        score = max(0.0, min(1.0, score))
+        score = max(0.01, min(0.99, score))
         success = score > 0.5
     except Exception as exc:
         print(f"[DEBUG] Episode {task_id} crashed: {exc}", flush=True)
