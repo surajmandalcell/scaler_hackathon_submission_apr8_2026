@@ -348,31 +348,28 @@ async def main() -> None:
     #                                   to `registry.hf.space/{repo}:latest`
     #                                   as a public, unauthenticated pull.
     env: FundLensClient | None = None
-    bootstrap_source = (
-        f"local image '{LOCAL_IMAGE_NAME}'"
-        if LOCAL_IMAGE_NAME
-        else f"HF Space '{HF_SPACE_REPO}'"
-    )
     try:
         if LOCAL_IMAGE_NAME:
-            env = await FundLensClient.from_docker_image(LOCAL_IMAGE_NAME)
+            try:
+                env = await FundLensClient.from_docker_image(LOCAL_IMAGE_NAME)
+            except Exception as local_exc:
+                print(
+                    f"[DEBUG] Local image '{LOCAL_IMAGE_NAME}' unavailable "
+                    f"({local_exc}), falling back to HF Space registry",
+                    flush=True,
+                )
+                env = await FundLensClient.from_env(HF_SPACE_REPO)
         else:
             env = await FundLensClient.from_env(HF_SPACE_REPO)
     except Exception as exc:
         print(
-            f"[ERROR] Could not start FundLens env from {bootstrap_source}: {exc}",
+            f"[ERROR] Could not start FundLens env: {exc}",
             file=sys.stderr,
             flush=True,
         )
         print(
-            "[HINT] Local dev:  docker build -t fundlens:latest . && "
-            "LOCAL_IMAGE_NAME=fundlens:latest python inference.py",
-            file=sys.stderr,
-            flush=True,
-        )
-        print(
-            f"[HINT] Grader path: leave LOCAL_IMAGE_NAME unset; the script "
-            f"will pull registry.hf.space/{HF_SPACE_REPO.replace('/', '-')}:latest",
+            f"[HINT] Ensure HF Space is running at "
+            f"registry.hf.space/{HF_SPACE_REPO.replace('/', '-')}:latest",
             file=sys.stderr,
             flush=True,
         )
